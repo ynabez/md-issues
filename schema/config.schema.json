@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/md-issues/schema/config.schema.json",
+  "title": "md-issues configuration",
+  "description": "config.json in the md-issues issue directory.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "lang": {
+      "description": "Language of messages and of the generated index. Never taken from the environment.",
+      "enum": ["en", "ja"],
+      "default": "en"
+    },
+    "status": {
+      "description": "Allowed statuses. Replaces the default set (open, doing, deferred, done, wontfix).",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[A-Za-z0-9_-]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["group"],
+        "properties": {
+          "label": { "type": "string", "description": "Shown in the index. Defaults to a translation or the status name." },
+          "group": { "type": "string", "description": "Id of a group in \"groups\"." },
+          "dir": {
+            "type": "string",
+            "description": "Where issues with this status live, relative to the issue directory. \"\" keeps them at the top.",
+            "default": ""
+          }
+        }
+      }
+    },
+    "groups": {
+      "description": "Index sections, in order.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "summary": { "type": "boolean", "description": "Show a per-severity breakdown in the summary line.", "default": false }
+        }
+      }
+    },
+    "required": {
+      "description": "Keys every issue must have, in addition to id, title and status.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "severity": {
+      "description": "Allowed severities, highest first. Also the sort order of the index.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "fields": {
+      "description": "Vocabularies of other fields: a list of allowed values or a regular expression.",
+      "type": "object",
+      "propertyNames": { "not": { "enum": ["id", "title", "status", "severity", "related", "commits"] } },
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "array", "items": { "type": "string" } },
+          { "type": "string", "description": "Regular expression (Unicode mode)." }
+        ]
+      }
+    },
+    "columns": {
+      "description": "Columns of the index tables. Default: id, title, severity (when configured), status.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string", "description": "A field name." },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fields"],
+            "properties": {
+              "label": { "type": "string" },
+              "fields": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "Values are joined with a space." }
+            }
+          }
+        ]
+      }
+    },
+    "linkFiles": {
+      "description": "Other files whose relative links are rewritten and checked (paths from the root; *, ** and ? allowed).",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "checkCommits": {
+      "description": "With --check, verify that every hash in \"commits\" is a commit in the Git repository.",
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

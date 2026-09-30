@@ -10,7 +10,7 @@ export const CONFIG_FILE = "config.json";
 /** Keys every issue must have, whatever `required` says. */
 export const CORE_KEYS = ["id", "title", "status"];
 
-const KNOWN = [
+export const CONFIG_KEYS = [
   "$schema", "lang", "status", "groups", "required", "severity",
   "fields", "columns", "linkFiles", "checkCommits",
 ];
@@ -58,7 +58,7 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
   const expect = (key, ok, expected) => { if (raw[key] !== undefined && !ok(raw[key])) fail("config.type", { key, expected }); };
 
   for (const key of Object.keys(raw)) {
-    if (!KNOWN.includes(key)) fail("config.unknownKey", { key, known: KNOWN.filter((k) => k !== "$schema").join(", ") });
+    if (!CONFIG_KEYS.includes(key)) fail("config.unknownKey", { key, known: CONFIG_KEYS.filter((k) => k !== "$schema").join(", ") });
   }
 
   expect("lang", (v) => LANGS.includes(v), LANGS.map((l) => `"${l}"`).join(" | "));
