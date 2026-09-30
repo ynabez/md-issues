@@ -5,6 +5,7 @@ import { ConfigError, UsageError, ValidationError } from "./errors.js";
 import { t } from "./i18n.js";
 import { openProject } from "./project.js";
 import { sync } from "./sync.js";
+import { init } from "./commands/init.js";
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
@@ -13,6 +14,10 @@ const HELP = `Usage: md-issues [command] [options]
 Commands:
   (none)                        Validate, move issues, rewrite links and generate the index
   --check, -c                   Validate only; change nothing (for CI and pre-commit)
+  --init, -i                    Create the issue directory with config.json, GUIDE.md,
+                                TEMPLATE.md and README.md (existing files are kept).
+                                With --dir, the directory is saved to package.json
+    --lang <en|ja>              Language of the created files and messages (default: en)
 
 Options:
   --dir, -d <path>              Issue directory, relative to the root
@@ -24,10 +29,11 @@ Options:
 
 const FLAGS = {
   "--check": "check", "-c": "check",
+  "--init": "init", "-i": "init",
   "--help": "help", "-h": "help",
   "--version": "version", "-v": "version",
 };
-const VALUES = { "--dir": "dir", "-d": "dir", "--root": "root" };
+const VALUES = { "--dir": "dir", "-d": "dir", "--root": "root", "--lang": "lang" };
 
 /** Commands that take a subcommand word. Filled in as commands are added. */
 const COMMANDS = {};
@@ -84,7 +90,15 @@ export function parseArgs(argv) {
     if (!COMMANDS[word]) throw new UsageError("usage.unknownCommand", { command: word });
     command = word;
   }
+  if (options.init) {
+    if (command !== "sync") throw new UsageError("usage.conflict", { a: "--init", b: command });
+    if (options.check) throw new UsageError("usage.conflict", { a: "--init", b: "--check" });
+    command = "init";
+  }
   if (command === "sync" && options.check) command = "check";
+  if (options.lang !== undefined && command !== "init" && command !== "help") {
+    throw new UsageError("usage.optionNotAllowed", { option: "--lang", with: "--init" });
+  }
 
   const accepts = COMMANDS[command]?.fields ?? false;
   if (!accepts && fields.length) throw new UsageError("usage.unknownOption", { option: fields[0].option });
@@ -118,6 +132,9 @@ export async function main(argv, io) {
       case "version":
         out(VERSION);
         return 0;
+      case "init":
+        if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
+        return init({ args, base, log, warn });
       case "sync":
       case "check": {
         if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });

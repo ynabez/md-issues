@@ -146,7 +146,7 @@ const MESSAGES = {
     "index.count": "{label} {n}",
 
     // Default guide
-    "guide": ({ cmd, dir, active, moves, example }) => `## How to write issues
+    "guide": ({ cmd, dir, active, moves, example, note }) => `## How to write issues
 
 One issue per file. Name files \`NNNN-slug.md\` (slug: lowercase letters, digits and hyphens).
 
@@ -159,10 +159,10 @@ ${example}
 \`\`\`
 
 Refer to other issues with relative links. \`${cmd}\` rewrites them when the target moves,
-so **the path at the time of writing is fine.**
+so **the path at the time of writing is fine.**${note ? `
 
 > This is the default text. Write project-specific conventions in \`${dir}/GUIDE.md\`;
-> it replaces this section.`,
+> it replaces this section.` : ""}`,
     "guide.move": "`status: {status}` goes to `{dir}`.",
     "guide.title": "One-line summary",
     "guide.commits": "commits that address the issue",
@@ -266,7 +266,7 @@ so **the path at the time of writing is fine.**
     "index.breakdown": "{label} {n}（{breakdown}）",
     "index.count": "{label} {n}",
 
-    "guide": ({ cmd, dir, active, moves, example }) => `## 書き方
+    "guide": ({ cmd, dir, active, moves, example, note }) => `## 書き方
 
 1 課題 = 1 ファイル。ファイル名は \`NNNN-slug.md\`（slug は英小文字・数字・ハイフン）。
 
@@ -279,10 +279,10 @@ ${example}
 \`\`\`
 
 他の課題を参照するときは相対リンクで書きます。リンク先が動いても
-\`${cmd}\` が張りなおすので、**書いた時点のパスで構いません。**
+\`${cmd}\` が張りなおすので、**書いた時点のパスで構いません。**${note ? `
 
 > この文章は既定のものです。プロジェクト固有の約束ごとは \`${dir}/GUIDE.md\` に
-> 書いてください。あればここへ差しかわります。`,
+> 書いてください。あればここへ差しかわります。` : ""}`,
     "guide.move": "`status: {status}` は `{dir}` へ移します。",
     "guide.title": "課題を一文で",
     "guide.commits": "対応したコミット",

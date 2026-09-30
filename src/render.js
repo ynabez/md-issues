@@ -73,10 +73,11 @@ const escape = (s) => String(s).replace(/\|/g, "\\|");
 function guide(ctx) {
   const path = join(ctx.dirAbs, GUIDE_FILE);
   if (existsSync(path)) return readFileSync(path, "utf8").trimEnd();
-  return defaultGuide(ctx);
+  return defaultGuide(ctx, { note: true });
 }
 
-export function defaultGuide(ctx) {
+/** `note`: add the line saying that GUIDE.md replaces this text. */
+export function defaultGuide(ctx, { note = false } = {}) {
   const { config } = ctx;
   const statuses = Object.entries(config.status);
   const active = statuses.filter(([, s]) => !s.dir).map(([k]) => `\`${k}\``).join(" / ");
@@ -84,7 +85,7 @@ export function defaultGuide(ctx) {
     .filter(([, s]) => s.dir)
     .map(([k, s]) => t("guide.move", { status: k, dir: `${ctx.dirRel}/${s.dir}` }))
     .join("\n");
-  return t("guide", { cmd: ctx.cmd, dir: ctx.dirRel, active, moves, example: exampleFrontmatter(config) });
+  return t("guide", { cmd: ctx.cmd, dir: ctx.dirRel, active, moves, example: exampleFrontmatter(config), note });
 }
 
 /** Example frontmatter reflecting the configured vocabulary. */
