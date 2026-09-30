@@ -97,6 +97,7 @@ const MESSAGES = {
     "usage.unknownField": "unknown field --{field} (known: {known})",
     "usage.notRepresentable": '{key}: the value "{value}" cannot be written as frontmatter (no line breaks, no " #", no [..] around a plain value)',
     "usage.badLang": "--lang must be one of: {langs}",
+    "template.invalid": "{file} has no valid frontmatter",
 
     // Issues
     "fm.missing": "{file}: no frontmatter (the file must start with ---)",
@@ -222,6 +223,7 @@ so **the path at the time of writing is fine.**${note ? `
     "usage.unknownField": "未知の項目 --{field}（使えるもの: {known}）",
     "usage.notRepresentable": '{key}: 値「{value}」は frontmatter に書けません（改行・" #"・値全体を囲む [..] は使えません）',
     "usage.badLang": "--lang は {langs} のどれかにします",
+    "template.invalid": "{file} に正しい frontmatter がありません",
 
     "fm.missing": "{file}: frontmatter がありません（先頭を --- にします）",
     "fm.unclosed": "{file}: frontmatter が --- で閉じていません",

@@ -6,6 +6,8 @@ import { t } from "./i18n.js";
 import { openProject } from "./project.js";
 import { sync } from "./sync.js";
 import { init } from "./commands/init.js";
+import { newIssue } from "./commands/new.js";
+import { setIssue } from "./commands/set.js";
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
@@ -18,6 +20,13 @@ Commands:
                                 TEMPLATE.md and README.md (existing files are kept).
                                 With --dir, the directory is saved to package.json
     --lang <en|ja>              Language of the created files and messages (default: en)
+  new "<title>"                 Create an issue with the next id from TEMPLATE.md
+    --slug <slug>               File name part (required when the title has no ASCII
+                                letters or digits)
+    --<key> <value>             Initial frontmatter value, e.g. --status doing
+                                (lists: --related 0001,0002)
+  set <id> <key>=<value> ...    Change frontmatter values, then move and re-index
+                                (lists: related=0001,0002; empty value removes a key)
 
 Options:
   --dir, -d <path>              Issue directory, relative to the root
@@ -33,10 +42,13 @@ const FLAGS = {
   "--help": "help", "-h": "help",
   "--version": "version", "-v": "version",
 };
-const VALUES = { "--dir": "dir", "-d": "dir", "--root": "root", "--lang": "lang" };
+const VALUES = { "--dir": "dir", "-d": "dir", "--root": "root", "--lang": "lang", "--slug": "slug" };
 
 /** Commands that take a subcommand word. Filled in as commands are added. */
-const COMMANDS = {};
+const COMMANDS = {
+  new: { run: newIssue, fields: true },
+  set: { run: setIssue },
+};
 
 /** Parse argv into { command, positionals, options, fields }. */
 export function parseArgs(argv) {
@@ -96,6 +108,9 @@ export function parseArgs(argv) {
     command = "init";
   }
   if (command === "sync" && options.check) command = "check";
+  if (options.slug !== undefined && command !== "new" && command !== "help") {
+    throw new UsageError("usage.optionNotAllowed", { option: "--slug", with: "new" });
+  }
   if (options.lang !== undefined && command !== "init" && command !== "help") {
     throw new UsageError("usage.optionNotAllowed", { option: "--lang", with: "--init" });
   }
@@ -142,7 +157,7 @@ export async function main(argv, io) {
         return 0;
       }
       default:
-        return await COMMANDS[args.command].run({ args, base, log, warn, out });
+        return await COMMANDS[args.command].run({ args, base, log, warn, out, err });
     }
   } catch (e) {
     if (e instanceof ValidationError) {

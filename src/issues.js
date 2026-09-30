@@ -141,5 +141,5 @@ export function compareIssues(config) {
     (groupOrder.get(config.status[a.data.status]?.group) ?? Infinity) -
       (groupOrder.get(config.status[b.data.status]?.group) ?? Infinity) ||
     (sev(a) === sev(b) ? 0 : sev(a) < sev(b) ? -1 : 1) ||
-    a.data.id.localeCompare(b.data.id);
+    String(a.data.id ?? "").localeCompare(String(b.data.id ?? ""));
 }
