@@ -8,6 +8,7 @@ import { sync } from "./sync.js";
 import { init } from "./commands/init.js";
 import { newIssue } from "./commands/new.js";
 import { setIssue } from "./commands/set.js";
+import { listIssues } from "./commands/list.js";
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
@@ -27,6 +28,10 @@ Commands:
                                 (lists: --related 0001,0002)
   set <id> <key>=<value> ...    Change frontmatter values, then move and re-index
                                 (lists: related=0001,0002; empty value removes a key)
+  list                          Print issues; changes nothing
+    --<key> <value>             Filter, e.g. --status open --status doing --severity high
+                                (same key: any value matches; different keys: all must)
+    --json                      Print JSON instead of a table
 
 Options:
   --dir, -d <path>              Issue directory, relative to the root
@@ -41,6 +46,7 @@ const FLAGS = {
   "--init": "init", "-i": "init",
   "--help": "help", "-h": "help",
   "--version": "version", "-v": "version",
+  "--json": "json",
 };
 const VALUES = { "--dir": "dir", "-d": "dir", "--root": "root", "--lang": "lang", "--slug": "slug" };
 
@@ -48,6 +54,7 @@ const VALUES = { "--dir": "dir", "-d": "dir", "--root": "root", "--lang": "lang"
 const COMMANDS = {
   new: { run: newIssue, fields: true },
   set: { run: setIssue },
+  list: { run: listIssues, fields: true },
 };
 
 /** Parse argv into { command, positionals, options, fields }. */
@@ -108,6 +115,9 @@ export function parseArgs(argv) {
     command = "init";
   }
   if (command === "sync" && options.check) command = "check";
+  if (options.json && command !== "list" && command !== "help") {
+    throw new UsageError("usage.optionNotAllowed", { option: "--json", with: "list" });
+  }
   if (options.slug !== undefined && command !== "new" && command !== "help") {
     throw new UsageError("usage.optionNotAllowed", { option: "--slug", with: "new" });
   }
