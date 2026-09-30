@@ -6,10 +6,14 @@ import { fileURLToPath } from "node:url";
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "md-issues.js");
 
-/** Create a temporary project from { "relative/path": "content" }. */
+/**
+ * Create a temporary project from { "relative/path": "content" }.
+ * An empty package.json is added unless `files` has one (pass null to omit it).
+ */
 export function project(files = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "md-issues-")));
-  for (const [path, content] of Object.entries(files)) write(root, path, content);
+  const all = { "package.json": {}, ...files };
+  for (const [path, content] of Object.entries(all)) if (content !== null) write(root, path, content);
   return root;
 }
 
