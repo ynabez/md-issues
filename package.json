@@ -1,0 +1,32 @@
+{
+  "name": "md-issues",
+  "version": "0.1.0",
+  "description": "Manage issues as Markdown files in your repository: validate frontmatter, move closed issues, rewrite links and generate an index.",
+  "license": "MIT",
+  "author": "ynabez",
+  "type": "module",
+  "bin": {
+    "md-issues": "bin/md-issues.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "schema/",
+    "README.md",
+    "README.ja.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "keywords": [
+    "issues",
+    "markdown",
+    "frontmatter",
+    "cli",
+    "issue-tracker"
+  ]
+}
