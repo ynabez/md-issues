@@ -91,7 +91,7 @@
       "items": { "type": "string" }
     },
     "checkCommits": {
-      "description": "With --check, verify that every hash in \"commits\" is a commit in the Git repository.",
+      "description": "With `md-issues check`, verify that every hash in \"commits\" is a commit in the Git repository.",
       "type": "boolean",
       "default": false
     }

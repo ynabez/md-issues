@@ -9,12 +9,12 @@
 - 未対応の課題だけが `issues/` の直下に残り、`done` は `issues/done/`、`wontfix` は `issues/wontfix/` へ移ります
 - 移動した課題への相対リンクは自動で張りなおします
 - `issues/README.md` は frontmatter から生成するので、実体とずれません
-- CI や pre-commit 向けの `--check`
+- CI や pre-commit 向けの `md-issues check`
 - 実行時の依存パッケージはありません
 
 ## 導入
 
-devDependencies に入れ、`package.json` の scripts から呼びます。`--check` は生成結果を
+devDependencies に入れ、`package.json` の scripts から呼びます。`md-issues check` は生成結果を
 バイト単位で比べるため、全員が同じ版を使う必要があります。
 
 ```bash
@@ -25,7 +25,7 @@ npm install --save-dev md-issues
 {
   "scripts": {
     "issues": "md-issues",
-    "check:issues": "md-issues --check"
+    "check:issues": "md-issues check"
   }
 }
 ```
@@ -35,7 +35,7 @@ Node.js 18 以上が必要です。
 ## はじめかた
 
 ```bash
-npx md-issues --init --lang ja             # issues/ と config.json・GUIDE.md・TEMPLATE.md・README.md を作る
+npx md-issues init --lang ja               # issues/ と config.json・GUIDE.md・TEMPLATE.md・README.md を作る
 npx md-issues new "Fix the login redirect" # issues/0001-fix-the-login-redirect.md を作る
 npx md-issues set 1 status=done            # frontmatter を書きかえ、issues/done/ へ移す
 npx md-issues list --status open           # 未対応の課題を表示する
@@ -84,8 +84,8 @@ frontmatter は **YAML ではありません**。YAML として読むと `id: 00
 | コマンド | 動作 |
 | --- | --- |
 | `md-issues` | 検証し、status が示す置き場所へ移し、リンクを張りなおして検証し、一覧を生成する |
-| `md-issues --check`, `-c` | 検証だけ行う。置き場所がずれている・一覧が古いときも失敗する |
-| `md-issues --init`, `-i` | 課題ディレクトリと `config.json`・`GUIDE.md`・`TEMPLATE.md`・`README.md` を作る。既存のファイルは上書きしない。`--lang ja` で日本語のファイルを作る |
+| `md-issues check` | 検証だけ行う。置き場所がずれている・一覧が古いときも失敗する |
+| `md-issues init` | 課題ディレクトリと `config.json`・`GUIDE.md`・`TEMPLATE.md`・`README.md` を作る。既存のファイルは上書きしない。`--lang ja` で日本語のファイルを作る |
 | `md-issues new "<タイトル>"` | `TEMPLATE.md` から次の番号の課題を作る |
 | `md-issues set <id> <キー>=<値> ...` | 1 件の課題の frontmatter を書きかえ、移動と一覧の生成まで行う |
 | `md-issues list` | 課題を表示する。何も書きかえない |
@@ -147,13 +147,13 @@ md-issues list --json
 2. root の `package.json` の `"issues": { "dir": "..." }`
 3. `issues/`
 
-`md-issues --init --dir docs/tasks` はディレクトリを `package.json` に書きこむので、
+`md-issues init --dir docs/tasks` はディレクトリを `package.json` に書きこむので、
 以後は `--dir` なしで使えます。課題ディレクトリは root の中に置きます。
 
 ## 設定
 
 `<dir>/config.json` は無くても動きます。未知のキーや型の誤りはエラーです。
-`--init` は `"$schema"` を書くので、エディタで補完と検証が効きます
+`md-issues init` は `"$schema"` を書くので、エディタで補完と検証が効きます
 （[schema/config.schema.json](schema/config.schema.json)）。
 
 | キー | 既定 | 意味 |
@@ -166,7 +166,7 @@ md-issues list --json
 | `fields` | `{}` | 語彙: `{ "<キー>": ["a", "b"] }` か `{ "<キー>": "<正規表現>" }` |
 | `columns` | `id, title, severity, status` | 一覧の列: 項目名か `{ "label", "fields": [...] }`（値を空白でつなぐ） |
 | `linkFiles` | `[]` | リンクを張りなおして検証するほかのファイル。`*`・`**`・`?` が使えます |
-| `checkCommits` | `false` | `--check` のとき、`commits` の各ハッシュを Git で確かめます |
+| `checkCommits` | `false` | `md-issues check` のとき、`commits` の各ハッシュを Git で確かめます |
 
 既定の status とグループ:
 
@@ -262,7 +262,7 @@ Git の pre-commit フック（`.git/hooks/pre-commit`）:
 
 ```sh
 #!/bin/sh
-exec npx --no-install md-issues --check
+exec npx --no-install md-issues check
 ```
 
 husky なら同じコマンドを `.husky/pre-commit` に書きます。lint-staged では、ファイルごとでなく
@@ -271,7 +271,7 @@ husky なら同じコマンドを `.husky/pre-commit` に書きます。lint-sta
 ```js
 // lint-staged.config.js
 export default {
-  "issues/**/*.md": () => "md-issues --check",
+  "issues/**/*.md": () => "md-issues check",
 };
 ```
 

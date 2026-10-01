@@ -9,13 +9,13 @@ moves closed issues out of the way, keeps relative links working and generates a
 - Open issues stay at the top of `issues/`; `done` goes to `issues/done/`, `wontfix` to `issues/wontfix/`
 - Relative links to moved issues are rewritten automatically
 - `issues/README.md` is generated from the frontmatter, so it never drifts
-- `--check` for CI and pre-commit hooks
+- `md-issues check` for CI and pre-commit hooks
 - No runtime dependencies
 
 ## Install
 
 Install it as a devDependency and run it from `package.json` scripts, so that everyone uses
-the same version (the generated index is compared byte for byte by `--check`).
+the same version (the generated index is compared byte for byte by `md-issues check`).
 
 ```bash
 npm install --save-dev md-issues
@@ -25,7 +25,7 @@ npm install --save-dev md-issues
 {
   "scripts": {
     "issues": "md-issues",
-    "check:issues": "md-issues --check"
+    "check:issues": "md-issues check"
   }
 }
 ```
@@ -35,7 +35,7 @@ Node.js 18 or later is required.
 ## Quick start
 
 ```bash
-npx md-issues --init                       # create issues/ with config.json, GUIDE.md, TEMPLATE.md, README.md
+npx md-issues init                         # create issues/ with config.json, GUIDE.md, TEMPLATE.md, README.md
 npx md-issues new "Fix the login redirect" # create issues/0001-fix-the-login-redirect.md
 npx md-issues set 1 status=done            # update frontmatter; the file moves to issues/done/
 npx md-issues list --status open           # print open issues
@@ -84,8 +84,8 @@ The frontmatter is **not YAML**. A YAML parser would read `id: 0031` as the numb
 | Command | What it does |
 | --- | --- |
 | `md-issues` | Validate, move issues to the directory their status says, rewrite links, check links, generate the index |
-| `md-issues --check`, `-c` | Validate only. Fails when an issue is misplaced or the index is out of date |
-| `md-issues --init`, `-i` | Create the issue directory with `config.json`, `GUIDE.md`, `TEMPLATE.md` and `README.md`. Existing files are kept. `--lang ja` writes Japanese files |
+| `md-issues check` | Validate only. Fails when an issue is misplaced or the index is out of date |
+| `md-issues init` | Create the issue directory with `config.json`, `GUIDE.md`, `TEMPLATE.md` and `README.md`. Existing files are kept. `--lang ja` writes Japanese files |
 | `md-issues new "<title>"` | Create an issue from `TEMPLATE.md` with the next id |
 | `md-issues set <id> <key>=<value> ...` | Change frontmatter values of one issue, then move and re-index |
 | `md-issues list` | Print issues. Changes nothing |
@@ -147,13 +147,13 @@ md-issues list --json
 2. `"issues": { "dir": "..." }` in the root `package.json`
 3. `issues/`
 
-`md-issues --init --dir docs/tasks` saves the directory to `package.json`, so later commands
+`md-issues init --dir docs/tasks` saves the directory to `package.json`, so later commands
 find it without `--dir`. The directory must be inside the root.
 
 ## Configuration
 
 `<dir>/config.json` is optional. Unknown keys and wrong types are errors.
-`--init` adds `"$schema"` so that editors can complete and validate it
+`md-issues init` adds `"$schema"` so that editors can complete and validate it
 ([schema/config.schema.json](schema/config.schema.json)).
 
 | Key | Default | Meaning |
@@ -166,7 +166,7 @@ find it without `--dir`. The directory must be inside the root.
 | `fields` | `{}` | Vocabularies: `{ "<key>": ["a", "b"] }` or `{ "<key>": "<regular expression>" }` |
 | `columns` | `id, title, severity, status` | Index columns: a field name or `{ "label", "fields": [...] }` (values joined with a space) |
 | `linkFiles` | `[]` | Other files whose links are rewritten and checked. `*`, `**` and `?` are allowed |
-| `checkCommits` | `false` | With `--check`, verify every hash in `commits` with Git |
+| `checkCommits` | `false` | With `md-issues check`, verify every hash in `commits` with Git |
 
 Default statuses and groups:
 
@@ -261,7 +261,7 @@ Git pre-commit hook (`.git/hooks/pre-commit`):
 
 ```sh
 #!/bin/sh
-exec npx --no-install md-issues --check
+exec npx --no-install md-issues check
 ```
 
 With husky, put the same command in `.husky/pre-commit`. With lint-staged, use a function so
@@ -270,7 +270,7 @@ that the checks run once for the whole directory rather than per file:
 ```js
 // lint-staged.config.js
 export default {
-  "issues/**/*.md": () => "md-issues --check",
+  "issues/**/*.md": () => "md-issues check",
 };
 ```
 

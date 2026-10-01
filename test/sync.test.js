@@ -5,7 +5,7 @@ import { project, write, read, exists, run, issue } from "./helpers.js";
 
 const base = () =>
   project({
-    "package.json": { scripts: { issues: "md-issues", "check:issues": "md-issues --check" } },
+    "package.json": { scripts: { issues: "md-issues", "check:issues": "md-issues check" } },
     "issues/0001-first.md": issue({ id: "0001", title: "First", status: "open", related: ["0002"] }, "\nSee [second](0002-second.md#details).\n"),
     "issues/0002-second.md": issue({ id: "0002", title: "Second", status: "done" }, "\n## Details\n\nBack to [first](0001-first.md) and [docs](../docs/guide.md).\n"),
     "docs/guide.md": "# Guide\n\nTracked in [0002](../issues/0002-second.md).\n",
@@ -29,19 +29,19 @@ test("moves closed issues, rewrites links and generates the index", () => {
   assert.match(index, /2 issues — Open 1 \/ Done 1 \/ Won't fix 0/);
   assert.match(index, /\| \[0002\]\(done\/0002-second\.md\) \| Second \| Done \|/);
 
-  assert.equal(run(root, "--check").code, 0);
+  assert.equal(run(root, "check").code, 0);
 });
 
-test("--check changes nothing and fails when files are misplaced or the index is stale", () => {
+test("check changes nothing and fails when files are misplaced or the index is stale", () => {
   const root = base();
-  const r = run(root, "-c");
+  const r = run(root, "check");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /should be at issues\/done\/0002-second\.md \(run `npm run issues`\)/);
   assert.ok(exists(root, "issues/0002-second.md"));
 
   run(root);
   write(root, "issues/README.md", "stale\n");
-  const s = run(root, "--check");
+  const s = run(root, "check");
   assert.equal(s.code, 1);
   assert.match(s.stderr, /out of date/);
 });
@@ -82,7 +82,7 @@ test("configured vocabulary, required keys and Japanese output", () => {
   assert.match(index, /## 書き方/);
 
   write(root, "issues/0001-a.md", issue({ id: "0001", title: "A", status: "open", severity: "中", origin: "X" }));
-  const bad = run(root, "--check");
+  const bad = run(root, "check");
   assert.equal(bad.code, 1);
   assert.match(bad.stderr, /frontmatter に scope がありません/);
   assert.match(bad.stderr, /severity が不正です \(中\)/);
@@ -134,7 +134,7 @@ test("checkCommits verifies hashes with git", () => {
   const root = project({ "issues/0001-a.md": issue({ id: "0001", title: "A", status: "open", commits: ["deadbee"] }), "issues/config.json": { checkCommits: true } });
   execFileSync("git", ["init", "-q"], { cwd: root });
   run(root);
-  const r = run(root, "--check");
+  const r = run(root, "check");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /commit deadbee does not exist/);
 });
@@ -142,7 +142,17 @@ test("checkCommits verifies hashes with git", () => {
 test("missing issue directory and bad options exit with 2", () => {
   const root = project({ "package.json": {} });
   assert.equal(run(root).code, 2);
-  assert.match(run(root).stderr, /Create it with `md-issues --init`/);
+  assert.match(run(root).stderr, /Create it with `md-issues init`/);
   assert.equal(run(root, "--nope").code, 2);
   assert.equal(run(root, "extra").code, 2);
+  assert.equal(run(root, "check", "extra").code, 2);
+});
+
+test("the options replaced by subcommands point to them", () => {
+  const root = project();
+  for (const [option, command] of [["--check", "check"], ["-c", "check"], ["--init", "init"], ["-i", "init"]]) {
+    const r = run(root, option);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, new RegExp(`${option} has been replaced by \`md-issues ${command}\``));
+  }
 });

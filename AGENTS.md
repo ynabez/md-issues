@@ -23,7 +23,7 @@ Guidance for coding agents working in this repository.
 - **No YAML parser.** Frontmatter is parsed by `src/frontmatter.js`, which only supports
   `key: value` and `key: [a, b]`, and keeps every value as a string. A YAML parser would turn
   `id: 0031` into `31` and some commit hashes (`4505e41`) into floats.
-- **Output must be deterministic.** `--check` compares the generated index byte for byte, so
+- **Output must be deterministic.** `md-issues check` compares the generated index byte for byte, so
   nothing may depend on the environment (locale, `LANG`, time, OS path separator).
   The language comes only from `lang` in `config.json`.
 - Exit codes: `0` success, `1` validation error, `2` configuration or usage error.

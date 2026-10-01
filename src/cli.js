@@ -16,8 +16,8 @@ const HELP = `Usage: md-issues [command] [options]
 
 Commands:
   (none)                        Validate, move issues, rewrite links and generate the index
-  --check, -c                   Validate only; change nothing (for CI and pre-commit)
-  --init, -i                    Create the issue directory with config.json, GUIDE.md,
+  check                         Validate only; change nothing (for CI and pre-commit)
+  init                          Create the issue directory with config.json, GUIDE.md,
                                 TEMPLATE.md and README.md (existing files are kept).
                                 With --dir, the directory is saved to package.json
     --lang <en|ja>              Language of the created files and messages (default: en)
@@ -42,16 +42,19 @@ Options:
 `;
 
 const FLAGS = {
-  "--check": "check", "-c": "check",
-  "--init": "init", "-i": "init",
   "--help": "help", "-h": "help",
   "--version": "version", "-v": "version",
   "--json": "json",
 };
 const VALUES = { "--dir": "dir", "-d": "dir", "--root": "root", "--lang": "lang", "--slug": "slug" };
 
-/** Commands that take a subcommand word. Filled in as commands are added. */
+// Options replaced by subcommands in 0.2.0, reported with a hint instead of "unknown option".
+const RENAMED = { "--check": "check", "-c": "check", "--init": "init", "-i": "init" };
+
+/** Subcommands. `fields`: accepts --<key> <value> frontmatter options. */
 const COMMANDS = {
+  check: { run: check },
+  init: { run: init },
   new: { run: newIssue, fields: true },
   set: { run: setIssue },
   list: { run: listIssues, fields: true },
@@ -83,7 +86,9 @@ export function parseArgs(argv) {
       return argv[++i];
     };
 
-    if (FLAGS[name]) {
+    if (RENAMED[arg]) {
+      throw new UsageError("usage.renamed", { option: arg, command: `md-issues ${RENAMED[arg]}` });
+    } else if (FLAGS[name]) {
       if (inline !== undefined) throw new UsageError("usage.unknownOption", { option: arg });
       options[FLAGS[name]] = true;
       seen.push(name);
@@ -109,12 +114,6 @@ export function parseArgs(argv) {
     if (!COMMANDS[word]) throw new UsageError("usage.unknownCommand", { command: word });
     command = word;
   }
-  if (options.init) {
-    if (command !== "sync") throw new UsageError("usage.conflict", { a: "--init", b: command });
-    if (options.check) throw new UsageError("usage.conflict", { a: "--init", b: "--check" });
-    command = "init";
-  }
-  if (command === "sync" && options.check) command = "check";
   if (options.json && command !== "list" && command !== "help") {
     throw new UsageError("usage.optionNotAllowed", { option: "--json", with: "list" });
   }
@@ -122,17 +121,21 @@ export function parseArgs(argv) {
     throw new UsageError("usage.optionNotAllowed", { option: "--slug", with: "new" });
   }
   if (options.lang !== undefined && command !== "init" && command !== "help") {
-    throw new UsageError("usage.optionNotAllowed", { option: "--lang", with: "--init" });
+    throw new UsageError("usage.optionNotAllowed", { option: "--lang", with: "init" });
   }
 
   const accepts = COMMANDS[command]?.fields ?? false;
   if (!accepts && fields.length) throw new UsageError("usage.unknownOption", { option: fields[0].option });
   const noValue = fields.find((f) => f.value === undefined);
   if (noValue) throw new UsageError("usage.missingValue", { option: noValue.option });
-  if (options.check && command !== "check" && command !== "help" && command !== "version") {
-    throw new UsageError("usage.conflict", { a: "--check", b: command });
-  }
   return { command, positionals, options, fields, seen };
+}
+
+/** md-issues check: the full pipeline without writing anything. */
+function check({ args, base, log, warn }) {
+  if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
+  sync(openProject(base), { check: true, log, warn });
+  return 0;
 }
 
 /**
@@ -157,15 +160,10 @@ export async function main(argv, io) {
       case "version":
         out(VERSION);
         return 0;
-      case "init":
-        if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
-        return init({ args, base, log, warn });
       case "sync":
-      case "check": {
         if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
-        sync(openProject(base), { check: args.command === "check", log, warn });
+        sync(openProject(base), { log, warn });
         return 0;
-      }
       default:
         return await COMMANDS[args.command].run({ args, base, log, warn, out, err });
     }

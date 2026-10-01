@@ -1,4 +1,4 @@
-// md-issues --init: create the issue directory and its starter files.
+// md-issues init: create the issue directory and its starter files.
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -12,6 +12,7 @@ import { DEFAULT_DIR, findRoot, resolveDir, saveDirToPackageJson } from "../root
 import { sync } from "../sync.js";
 
 export function init({ args, base, log, warn }) {
+  if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
   const lang = args.options.lang ?? "en";
   if (!LANGS.includes(lang)) throw new UsageError("usage.badLang", { langs: LANGS.join(", ") });
 

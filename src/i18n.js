@@ -62,7 +62,7 @@ const MESSAGES = {
     "pkg.issuesType": '{file}: "issues" must be an object like { "dir": "issues" }',
     "dir.isRoot": "the issue directory ({dir}) must not be the project root",
     "dir.outside": "the issue directory ({dir}) must be inside the project root",
-    "dir.missing": "the issue directory {dir}/ does not exist. Create it with `md-issues --init`.",
+    "dir.missing": "the issue directory {dir}/ does not exist. Create it with `md-issues init`.",
 
     // config.json
     "config.invalidJson": "{file} is not valid JSON: {message}",
@@ -80,10 +80,10 @@ const MESSAGES = {
 
     // Command line
     "usage.unknownOption": "unknown option {option}",
+    "usage.renamed": "{option} has been replaced by `{command}`",
     "usage.missingValue": "{option} needs a value",
     "usage.unknownCommand": "unknown command {command}",
     "usage.extraArgs": "unexpected argument {arg}",
-    "usage.conflict": "{a} cannot be combined with {b}",
     "usage.optionNotAllowed": "{option} can only be used with {with}",
     "usage.missingTitle": 'give a title: md-issues new "<title>"',
     "usage.missingSlug": 'cannot derive a slug from "{title}". Give one with --slug <slug>.',
@@ -190,7 +190,7 @@ so **the path at the time of writing is fine.**${note ? `
     "pkg.issuesType": '{file}: "issues" は { "dir": "issues" } のようなオブジェクトにします',
     "dir.isRoot": "課題ディレクトリ（{dir}）をプロジェクトの root にはできません",
     "dir.outside": "課題ディレクトリ（{dir}）はプロジェクトの root の中に置きます",
-    "dir.missing": "課題ディレクトリ {dir}/ がありません。`md-issues --init` で作ってください。",
+    "dir.missing": "課題ディレクトリ {dir}/ がありません。`md-issues init` で作ってください。",
 
     "config.invalidJson": "{file} が JSON として読めません: {message}",
     "config.notObject": "{file} は JSON のオブジェクトにします",
@@ -206,10 +206,10 @@ so **the path at the time of writing is fine.**${note ? `
     "config.linkGlobEmpty": "{file}: linkFiles の {pattern} に当たるファイルがありません",
 
     "usage.unknownOption": "未知のオプション {option}",
+    "usage.renamed": "{option} は `{command}` に変わりました",
     "usage.missingValue": "{option} に値がありません",
     "usage.unknownCommand": "未知のコマンド {command}",
     "usage.extraArgs": "余分な引数 {arg}",
-    "usage.conflict": "{a} と {b} は同時に使えません",
     "usage.optionNotAllowed": "{option} は {with} と一緒にだけ使えます",
     "usage.missingTitle": 'タイトルを指定してください: md-issues new "<タイトル>"',
     "usage.missingSlug": "「{title}」から slug を作れません。--slug <slug> で指定してください。",
