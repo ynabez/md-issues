@@ -14,7 +14,10 @@ export function listIssues({ args, base, out, warn }) {
   // Listing is read-only: report problems but still show what could be read.
   for (const p of [...scan.problems, ...validateIssues(scan.issues, config), ...scan.warnings]) warn(p.code, p.params);
 
-  const known = new Set(["status", "severity", "related", "commits", ...Object.keys(config.fields), ...config.required]);
+  const known = new Set([
+    "status", "severity", "related", "commits", ...Object.keys(config.fields), ...config.required,
+    ...(config.allowedKeys ?? []),
+  ]);
   for (const it of scan.issues) for (const k of Object.keys(it.data)) known.add(k);
 
   // Same key: any of the values. Different keys: all of them.

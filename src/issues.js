@@ -87,6 +87,13 @@ export function validateIssues(issues, config) {
     for (const key of single) {
       if (Array.isArray(d[key])) add(it, "issue.notString", { key });
     }
+    if (config.allowedKeys) {
+      for (const key of Object.keys(d)) {
+        if (config.allowedKeys.has(key)) continue;
+        const hint = closest(key, config.allowedKeys);
+        add(it, hint ? "issue.unknownKeyHint" : "issue.unknownKey", { key, hint });
+      }
+    }
     if (typeof d.id === "string" && d.id && !it.name.startsWith(`${d.id}-`)) {
       add(it, "issue.idMismatch", { id: d.id });
     }
@@ -123,6 +130,32 @@ export function validateIssues(issues, config) {
     }
   }
   return problems;
+}
+
+/** The candidate within edit distance 2 of `word`, for "did you mean" hints. */
+export function closest(word, candidates) {
+  let best = null;
+  let bestDistance = 3;
+  for (const c of candidates) {
+    const d = distance(word, c);
+    if (d < bestDistance) {
+      best = c;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+function distance(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = row;
+  }
+  return prev[b.length];
 }
 
 export function asList(value) {

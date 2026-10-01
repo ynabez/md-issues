@@ -12,8 +12,11 @@ export const CORE_KEYS = ["id", "title", "status"];
 
 export const CONFIG_KEYS = [
   "$schema", "lang", "status", "groups", "required", "severity",
-  "fields", "columns", "linkFiles", "checkCommits",
+  "fields", "columns", "linkFiles", "checkCommits", "keys",
 ];
+
+/** Keys every issue may have, whatever `keys` says. */
+const BUILTIN_KEYS = ["id", "title", "status", "related", "commits"];
 
 // Fields whose vocabulary is configured elsewhere, so `fields` must not redefine them.
 const RESERVED_FIELDS = ["id", "title", "status", "severity", "related", "commits"];
@@ -72,6 +75,7 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
   expect("columns", Array.isArray, "an array");
   expect("linkFiles", isStringArray, "an array of strings");
   expect("checkCommits", (v) => typeof v === "boolean", "true or false");
+  expect("keys", isStringArray, "an array of strings");
 
   // Groups first: statuses refer to them.
   const groups = (raw.groups ?? DEFAULT_GROUPS).map((g, i) => {
@@ -129,6 +133,18 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
     columns,
     linkFiles: raw.linkFiles ?? [],
     checkCommits: raw.checkCommits ?? false,
+    // Only when `keys` is given: every key an issue may use. Keys the configuration
+    // already mentions are included, so `keys` only lists the extra ones.
+    allowedKeys: raw.keys
+      ? new Set([
+          ...BUILTIN_KEYS,
+          ...(severity ? ["severity"] : []),
+          ...Object.keys(fields),
+          ...(raw.required ?? []),
+          ...columns.flatMap((c) => c.fields),
+          ...raw.keys,
+        ])
+      : null,
   };
 }
 

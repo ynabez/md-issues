@@ -25,7 +25,7 @@ export function newIssue({ args, base, log, warn }) {
   const source = loadTemplate(ctx);
   const known = new Set([
     "status", "severity", ...LIST_KEYS, ...Object.keys(ctx.config.fields),
-    ...ctx.config.required, ...Object.keys(source.data),
+    ...ctx.config.required, ...Object.keys(source.data), ...(ctx.config.allowedKeys ?? []),
   ]);
   known.delete("id");
   known.delete("title");

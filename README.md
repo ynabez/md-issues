@@ -167,6 +167,7 @@ find it without `--dir`. The directory must be inside the root.
 | `columns` | `id, title, severity, status` | Index columns: a field name or `{ "label", "fields": [...] }` (values joined with a space) |
 | `linkFiles` | `[]` | Other files whose links are rewritten and checked. `*`, `**` and `?` are allowed |
 | `checkCommits` | `false` | With `md-issues check`, verify every hash in `commits` with Git |
+| `keys` | none | Extra frontmatter keys issues may use. When given, any other key is an error (catches typos such as `relatd`). Keys already used by the settings above, plus `related` and `commits`, are always allowed |
 
 Default statuses and groups:
 

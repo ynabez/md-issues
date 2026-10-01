@@ -156,3 +156,20 @@ test("the options replaced by subcommands point to them", () => {
     assert.match(r.stderr, new RegExp(`${option} has been replaced by \`md-issues ${command}\``));
   }
 });
+
+test("keys: unknown frontmatter keys are errors only when declared", () => {
+  const files = {
+    "issues/0001-a.md": issue({ id: "0001", title: "A", status: "open", relatd: ["0002"], blocked_by: "x", scope: "a" }),
+    "issues/0002-b.md": issue({ id: "0002", title: "B", status: "open" }),
+  };
+  assert.equal(run(project(files)).code, 0);
+
+  const root = project({ ...files, "issues/config.json": { keys: ["blocked_by"], fields: { scope: ["a"] } } });
+  const r = run(root);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /unknown key relatd \(did you mean related\?\)/);
+  assert.doesNotMatch(r.stderr, /blocked_by|scope/);
+
+  const strict = project({ ...files, "issues/config.json": { keys: [] } });
+  assert.match(run(strict).stderr, /unknown key blocked_by \(add it to "keys" in config\.json/);
+});

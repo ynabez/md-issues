@@ -90,6 +90,11 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "keys": {
+      "description": "Extra frontmatter keys issues may use. When given, any other key is an error. id, title, status, related, commits and the keys used by severity, fields, required and columns are always allowed.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "checkCommits": {
       "description": "With `md-issues check`, verify that every hash in \"commits\" is a commit in the Git repository.",
       "type": "boolean",
