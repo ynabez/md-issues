@@ -5,6 +5,7 @@ import { getValue } from "../frontmatter.js";
 import { defaultColumnLabel, t } from "../i18n.js";
 import { asList, compareIssues, scanIssues, validateIssues } from "../issues.js";
 import { openProject } from "../project.js";
+import { padEnd, width } from "../text/width.js";
 
 export function listIssues({ args, base, out, warn }) {
   if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
@@ -49,20 +50,7 @@ export function listIssues({ args, base, out, warn }) {
   ];
   const widths = fields.map((_, i) => Math.max(...rows.map((r) => width(r[i]))));
   for (const r of rows) {
-    out(r.map((c, i) => (i === r.length - 1 ? c : c + " ".repeat(widths[i] - width(c)))).join("  ").trimEnd());
+    out(r.map((c, i) => (i === r.length - 1 ? c : padEnd(c, widths[i]))).join("  ").trimEnd());
   }
   return 0;
-}
-
-/** Display width: East Asian wide and fullwidth characters take two columns. */
-export function width(s) {
-  let w = 0;
-  for (const ch of String(s)) {
-    const c = ch.codePointAt(0);
-    w += (c >= 0x1100 && c <= 0x115f) || (c >= 0x2e80 && c <= 0xa4cf) || (c >= 0xac00 && c <= 0xd7a3) ||
-      (c >= 0xf900 && c <= 0xfaff) || (c >= 0xfe30 && c <= 0xfe4f) || (c >= 0xff00 && c <= 0xff60) ||
-      (c >= 0xffe0 && c <= 0xffe6) || (c >= 0x1f300 && c <= 0x1faff) || (c >= 0x20000 && c <= 0x3fffd)
-      ? 2 : 1;
-  }
-  return w;
 }

@@ -11,6 +11,7 @@ import { asList, findIssue, scanIssues } from "../issues.js";
 import { findLinks } from "../markdown.js";
 import { openProject } from "../project.js";
 import { decode, expandLinkFiles, linkTargets } from "../sync.js";
+import { padEnd, width } from "../text/width.js";
 
 export function refsCommand({ args, base, out }) {
   const [id, ...extra] = args.positionals;
@@ -29,9 +30,10 @@ export function refsCommand({ args, base, out }) {
     out(t("result.noRefs", { id: target.data.id }));
   } else {
     const kinds = { related: t("refs.related"), link: t("refs.link") };
-    const width = Math.max(...Object.values(kinds).map((k) => k.length));
+    // Display width, not length: "リンク" is 3 characters but 6 columns.
+    const columns = Math.max(...refs.map((r) => width(kinds[r.kind])));
     for (const r of refs) {
-      out(`${kinds[r.kind].padEnd(width)}  ${r.kind === "link" ? `${r.path}:${r.line}` : r.path}`);
+      out(`${padEnd(kinds[r.kind], columns)}  ${r.kind === "link" ? `${r.path}:${r.line}` : r.path}`);
     }
   }
   return 0;

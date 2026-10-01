@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { project, run, issue } from "./helpers.js";
+import { project, run, issue, write } from "./helpers.js";
 
 const root = () =>
   project({
@@ -35,4 +35,13 @@ test("errors", () => {
   assert.equal(run(dir, "refs").code, 2);
   assert.equal(run(dir, "refs", "0099").code, 2);
   assert.equal(run(dir, "refs", "1", "2").code, 2);
+});
+
+test("columns are aligned by display width in Japanese", () => {
+  const dir = root();
+  write(dir, "issues/config.json", { lang: "ja", linkFiles: ["docs/*.md"] });
+  assert.equal(run(dir, "refs", "6").stdout.split("\n").slice(0, 2).join("\n"), [
+    "related  issues/0001-a.md",
+    "リンク   docs/notes.md:3",
+  ].join("\n"));
 });
