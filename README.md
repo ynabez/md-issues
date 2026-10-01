@@ -89,6 +89,7 @@ The frontmatter is **not YAML**. A YAML parser would read `id: 0031` as the numb
 | `md-issues new "<title>"` | Create an issue from `TEMPLATE.md` with the next id |
 | `md-issues set <id> <key>=<value> ...` | Change frontmatter values of one issue, then move and re-index |
 | `md-issues list` | Print issues. Changes nothing |
+| `md-issues refs <id>` | Show what refers to an issue (`related` and links). Changes nothing |
 
 Common options:
 
@@ -132,6 +133,19 @@ md-issues list --json
 - List fields (`related`, `commits`) match when they contain the value. `list --related <id>`
   therefore shows the issues that refer to `<id>` in `related`, for example before deleting it.
 - `--json` prints the frontmatter of each issue plus `group` and `path`.
+
+### `refs`
+
+```bash
+md-issues refs 0006
+# related  issues/0009-x.md
+# link     docs/notes.md:12
+md-issues refs 6 --json
+```
+
+- Lists issues with the id in `related`, and relative links to the issue (with line numbers)
+  in issue files, `GUIDE.md`, `TEMPLATE.md` and `linkFiles`. Links in code are skipped.
+- Use it before deleting an issue: fix the references, then remove the file with `git rm`.
 
 ## Where things are
 

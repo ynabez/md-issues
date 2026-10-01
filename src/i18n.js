@@ -92,6 +92,7 @@ const MESSAGES = {
     "usage.missingId": "give an issue id: md-issues set <id> <key>=<value> ...",
     "usage.missingAssignment": "give at least one <key>=<value>",
     "usage.unknownId": "no issue with id {id}",
+    "usage.missingRefsId": "give an issue id: md-issues refs <id>",
     "usage.badAssignment": "{arg} is not <key>=<value>",
     "usage.badKey": "{key} is not a valid frontmatter key",
     "usage.cannotSetId": "the id cannot be changed with set",
@@ -142,6 +143,9 @@ const MESSAGES = {
     "result.savedDir": 'Saved "issues": {"dir": "{dir}"} to package.json',
     "result.noPackageJson": "There is no package.json at the project root, so pass --dir {dir} every time.",
     "result.noIssues": "No issues.",
+    "result.noRefs": "Nothing refers to {id}.",
+    "refs.related": "related",
+    "refs.link": "link",
 
     // Generated index
     "index.title": "Issues",
@@ -222,6 +226,7 @@ so **the path at the time of writing is fine.**${note ? `
     "usage.missingId": "課題の id を指定してください: md-issues set <id> <キー>=<値> ...",
     "usage.missingAssignment": "<キー>=<値> を 1 つ以上指定してください",
     "usage.unknownId": "id {id} の課題はありません",
+    "usage.missingRefsId": "課題の id を指定してください: md-issues refs <id>",
     "usage.badAssignment": "{arg} が <キー>=<値> の形になっていません",
     "usage.badKey": "{key} は frontmatter のキーとして使えません",
     "usage.cannotSetId": "id は set で変えられません",
@@ -269,6 +274,9 @@ so **the path at the time of writing is fine.**${note ? `
     "result.savedDir": 'package.json に "issues": {"dir": "{dir}"} を書きこみました',
     "result.noPackageJson": "プロジェクトの root に package.json が無いため、以後も --dir {dir} を毎回指定してください。",
     "result.noIssues": "課題はありません。",
+    "result.noRefs": "{id} を参照しているものはありません。",
+    "refs.related": "related",
+    "refs.link": "リンク",
 
     "index.title": "課題一覧",
     "index.notice": "**このファイルは `{cmd}` で生成します。手で編集しないでください。**\n内容を変えるときは各課題ファイルの frontmatter を直します。",

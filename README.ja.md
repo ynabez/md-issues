@@ -89,6 +89,7 @@ frontmatter は **YAML ではありません**。YAML として読むと `id: 00
 | `md-issues new "<タイトル>"` | `TEMPLATE.md` から次の番号の課題を作る |
 | `md-issues set <id> <キー>=<値> ...` | 1 件の課題の frontmatter を書きかえ、移動と一覧の生成まで行う |
 | `md-issues list` | 課題を表示する。何も書きかえない |
+| `md-issues refs <id>` | 課題を参照しているもの（`related` とリンク）を表示する。何も書きかえない |
 
 共通のオプション:
 
@@ -132,6 +133,19 @@ md-issues list --json
 - 配列の項目（`related`・`commits`）は、その値を含んでいれば一致します。そのため
   `list --related <id>` で、`related` に `<id>` を書いている課題が分かります（削除する前の確認など）
 - `--json` は各課題の frontmatter に `group` と `path` を足して出力します
+
+### `refs`
+
+```bash
+md-issues refs 0006
+# related  issues/0009-x.md
+# リンク   docs/notes.md:12
+md-issues refs 6 --json
+```
+
+- `related` にその id を書いている課題と、課題ファイル・`GUIDE.md`・`TEMPLATE.md`・`linkFiles` の中の
+  その課題への相対リンク（行番号つき）を一覧します。コードの中のリンクは数えません
+- 課題を消す前に使います。参照元を直してから、`git rm` でファイルを消してください
 
 ## 場所の決まりかた
 

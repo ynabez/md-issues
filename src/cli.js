@@ -9,6 +9,7 @@ import { init } from "./commands/init.js";
 import { newIssue } from "./commands/new.js";
 import { setIssue } from "./commands/set.js";
 import { listIssues } from "./commands/list.js";
+import { refsCommand } from "./commands/refs.js";
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
@@ -32,6 +33,9 @@ Commands:
     --<key> <value>             Filter, e.g. --status open --status doing --severity high
                                 (same key: any value matches; different keys: all must)
     --json                      Print JSON instead of a table
+  refs <id>                     Show what refers to an issue: "related" in other issues and
+                                relative links (for example before deleting it)
+    --json                      Print JSON
 
 Options:
   --dir, -d <path>              Issue directory, relative to the root
@@ -58,6 +62,7 @@ const COMMANDS = {
   new: { run: newIssue, fields: true },
   set: { run: setIssue },
   list: { run: listIssues, fields: true },
+  refs: { run: refsCommand },
 };
 
 /** Parse argv into { command, positionals, options, fields }. */
@@ -114,8 +119,8 @@ export function parseArgs(argv) {
     if (!COMMANDS[word]) throw new UsageError("usage.unknownCommand", { command: word });
     command = word;
   }
-  if (options.json && command !== "list" && command !== "help") {
-    throw new UsageError("usage.optionNotAllowed", { option: "--json", with: "list" });
+  if (options.json && command !== "list" && command !== "refs" && command !== "help") {
+    throw new UsageError("usage.optionNotAllowed", { option: "--json", with: "list / refs" });
   }
   if (options.slug !== undefined && command !== "new" && command !== "help") {
     throw new UsageError("usage.optionNotAllowed", { option: "--slug", with: "new" });
