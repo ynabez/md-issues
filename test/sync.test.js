@@ -250,7 +250,8 @@ test("nothing is written when validation fails after moving", () => {
   const before = { a: read(root, "issues/0001-a.md"), b: read(root, "issues/0002-b.md") };
   const r = run(root);
   assert.equal(r.code, 1);
-  assert.match(r.stderr, /link target does not exist/);
+  // Reported as on disk: the file was not moved and the link not rewritten.
+  assert.match(r.stderr, /issues\/0001-a\.md: link target does not exist → missing\.md\n/);
   assert.doesNotMatch(r.stdout, /Moved/);
   assert.equal(read(root, "issues/0001-a.md"), before.a);
   assert.equal(read(root, "issues/0002-b.md"), before.b);

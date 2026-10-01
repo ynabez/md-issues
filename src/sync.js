@@ -50,6 +50,9 @@ export function sync(ctx, { check = false, log, warn, transform, writes = [], on
       return { it, want, from: it.path, to: `${ctx.dirRel}/${want}${it.name}` };
     });
 
+  // Maps a pending file and link back to what is on disk, for messages.
+  let origin = (file, target) => ({ file, target });
+
   if (check && moves.length) {
     throw new ValidationError(moves.map((m) => ({ code: "issue.misplaced", params: { from: m.from, to: m.to, cmd: ctx.cmd } })));
   }
@@ -64,14 +67,14 @@ export function sync(ctx, { check = false, log, warn, transform, writes = [], on
       Object.assign(m.it, { dir: m.want, file: m.want + m.it.name, path: m.to });
     }
     // Always run, so that hand-written links that miss done/ are fixed too.
-    relink(ctx, ws, issues, linkFiles, new Map(moves.map((m) => [m.from, m.to])));
+    origin = relink(ctx, ws, issues, linkFiles, new Map(moves.map((m) => [m.from, m.to])));
   }
 
   // Checked against the pending state: moved files, rewritten links, the new index.
   const index = buildIndex(ctx, issues);
   const problems = [
-    ...checkLinks(ws, linkTargets(ctx, issues, linkFiles)),
-    ...checkLinks(ws, [ctx.indexRel], { [ctx.indexRel]: index }),
+    ...checkLinks(ws, linkTargets(ctx, issues, linkFiles), { origin }),
+    ...checkLinks(ws, [ctx.indexRel], { contents: { [ctx.indexRel]: index } }),
     ...(check && ctx.config.checkCommits ? checkCommits(ctx, issues) : []),
   ];
   if (problems.length) throw new ValidationError(problems);
@@ -130,6 +133,7 @@ export function linkTargets(ctx, issues, linkFiles) {
  */
 function relink(ctx, ws, issues, linkFiles, moved) {
   const back = new Map([...moved].map(([from, to]) => [to, from]));
+  const original = new Map(); // rel → Map(new target → target on disk)
   const byName = new Map(issues.map((it) => [it.name, it.path]));
   const inDir = (p) => p.startsWith(`${ctx.dirRel}/`);
 
@@ -143,38 +147,52 @@ function relink(ctx, ws, issues, linkFiles, moved) {
       const dest = byIssue ?? moved.get(joined) ?? joined;
       const next = posix.relative(posix.dirname(rel), dest);
       if (!next || posix.join(posix.dirname(rel), decode(target)) === dest) return null;
-      return /%[0-9a-f]{2}/i.test(target) ? encodeURI(next) : next;
+      const result = /%[0-9a-f]{2}/i.test(target) ? encodeURI(next) : next;
+      if (!original.has(rel)) original.set(rel, new Map());
+      if (!original.get(rel).has(result)) original.get(rel).set(result, target);
+      return result;
     });
     if (out !== text) ws.write(rel, out);
   }
+
+  // Problems are found in the pending state but reported as the user wrote them: the file
+  // where it is now and the link as it reads on disk, since nothing has been written yet.
+  return (file, target) => ({
+    file: back.get(file) ?? file,
+    target: original.get(file)?.get(target) ?? target,
+  });
 }
 
 /**
  * Check relative links in `files`: empty links, missing .md targets and missing heading
- * anchors. `contents` supplies text for files not written yet (the index).
+ * anchors. `contents` supplies text for files not in the workspace (the index), and
+ * `origin(file, target)` maps locations back to the files on disk for messages.
  */
-function checkLinks(ws, files, contents = {}) {
+function checkLinks(ws, files, { contents = {}, origin = (file, target) => ({ file, target }) } = {}) {
   const problems = [];
   const readText = (rel) => (contents[rel] !== undefined ? contents[rel] : ws.read(rel));
+  const report = (code, rel, link) => {
+    const where = origin(rel, link.target);
+    problems.push({ code, params: { file: where.file, target: where.target + link.anchor } });
+  };
 
   for (const rel of files) {
     const text = readText(rel);
     for (const link of findLinks(text)) {
       if (link.empty) {
-        problems.push({ code: "link.empty", params: { file: rel } });
+        report("link.empty", rel, link);
         continue;
       }
-      const shown = link.target + link.anchor;
       if (!link.target) {
-        if (!hasAnchor(text, link.anchor)) problems.push({ code: "link.anchor", params: { file: rel, target: shown } });
+        if (!hasAnchor(text, link.anchor)) report("link.anchor", rel, link);
         continue;
       }
       if (!link.target.endsWith(".md")) continue;
       const dest = posix.join(posix.dirname(rel), decode(link.target));
       if (!ws.exists(dest)) {
-        problems.push({ code: "link.missing", params: { file: rel, target: shown } });
+        report("link.missing", rel, link);
       } else if (link.anchor && !hasAnchor(readText(dest), link.anchor)) {
-        problems.push({ code: "link.anchor", params: { file: rel, target: shown } });
+        report("link.anchor", rel, link);
       }
     }
   }
