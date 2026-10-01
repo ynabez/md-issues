@@ -51,3 +51,17 @@ test("option errors", () => {
   assert.equal(run(root, "check", "--lang", "ja").code, 2);
   assert.equal(run(root, "init", "--lang", "fr").code, 2);
 });
+
+test("messages use the language of an existing config.json from the first line", () => {
+  const root = project({ "issues/config.json": { lang: "ja" } });
+  run(root, "init");
+  const r = run(root, "init");
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(r.stdout, [
+    "スキップ: issues/config.json（すでにあります）",
+    "スキップ: issues/GUIDE.md（すでにあります）",
+    "スキップ: issues/TEMPLATE.md（すでにあります）",
+    "スキップ: issues/README.md（すでにあります）",
+    "",
+  ].join("\n"));
+});

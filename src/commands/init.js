@@ -21,16 +21,17 @@ export function init({ args, base, log, warn }) {
   const dirAbs = join(root, dirRel);
   mkdirSync(dirAbs, { recursive: true });
 
-  const created = [];
+  // Results are printed once config.json has been read: its "lang" decides the language
+  // of every message, including the one about config.json itself.
+  const results = [];
   const create = (name, content) => {
     const path = `${dirRel}/${name}`;
     if (existsSync(join(dirAbs, name))) {
-      log("result.skipped", { path });
-      return false;
+      results.push({ code: "result.skipped", path });
+      return;
     }
     writeFileSync(join(dirAbs, name), content());
-    created.push(path);
-    return true;
+    results.push({ code: "result.created", path });
   };
 
   create(CONFIG_FILE, () => {
@@ -42,7 +43,7 @@ export function init({ args, base, log, warn }) {
   const ctx = openProject({ ...base, root, dir: dirRel });
   create(GUIDE_FILE, () => defaultGuide(ctx) + "\n");
   create(TEMPLATE_FILE, () => template(ctx.config));
-  for (const path of created) log("result.created", { path });
+  for (const r of results) log(r.code, { path: r.path });
 
   if (existsSync(join(dirAbs, INDEX_FILE))) {
     log("result.skipped", { path: ctx.indexRel });
