@@ -124,7 +124,7 @@ const MESSAGES = {
     "issue.relatedMissing": "{file}: related issue {id} does not exist",
     "issue.misplaced": "{from} should be at {to} (run `{cmd}`)",
     "issue.moveConflict": "cannot move {from}: {to} already exists",
-    "issue.unknownDir": "{file} is not in a directory used by any status and is ignored",
+    "issue.unknownDir": "{file} is not an issue file and not in a directory used by any status; ignored",
 
     // Links and commits
     "link.empty": "{file}: empty link target [..]()",
@@ -257,7 +257,7 @@ so **the path at the time of writing is fine.**${note ? `
     "issue.relatedMissing": "{file}: related の {id} が存在しません",
     "issue.misplaced": "{from} は {to} に置きます（`{cmd}` を実行してください）",
     "issue.moveConflict": "{from} を移動できません: {to} がすでにあります",
-    "issue.unknownDir": "{file} はどの status の置き場所でもないため、無視します",
+    "issue.unknownDir": "{file} は課題のファイル名でなく、どの status の置き場所でもないため、無視します",
 
     "link.empty": "{file}: リンク先が空の [..]() があります",
     "link.missing": "{file}: リンク先がありません → {target}",

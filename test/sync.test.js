@@ -115,7 +115,7 @@ test("linkFiles that match nothing are configuration errors", () => {
   assert.match(r.stderr, /matches no files/);
 });
 
-test("custom statuses and stray files", () => {
+test("custom statuses; issue files anywhere are read, other Markdown is a warning", () => {
   const root = project({
     "issues/config.json": {
       status: { todo: { group: "a", dir: "" }, closed: { group: "b", dir: "archive" } },
@@ -123,11 +123,35 @@ test("custom statuses and stray files", () => {
     },
     "issues/0001-a.md": issue({ id: "0001", title: "A", status: "closed" }),
     "issues/done/0002-b.md": issue({ id: "0002", title: "B", status: "todo" }),
+    "issues/notes/ideas.md": "# Ideas\n",
   });
   const r = run(root);
   assert.equal(r.code, 0, r.stderr);
   assert.ok(exists(root, "issues/archive/0001-a.md"));
-  assert.match(r.stderr, /Warning: issues\/done\/0002-b\.md is not in a directory used by any status/);
+  assert.ok(exists(root, "issues/0002-b.md"), "moved out of a directory no status uses");
+  assert.match(r.stdout, /Moved: issues\/done\/0002-b\.md → issues\/0002-b\.md/);
+  assert.match(r.stderr, /Warning: issues\/notes\/ideas\.md is not an issue file/);
+  assert.match(read(root, "issues/README.md"), /2 issues — Todo 1 \/ Closed 1/);
+});
+
+test("an issue in a directory the configuration dropped is not silently left out", () => {
+  const root = project({
+    "issues/config.json": { status: { open: { group: "active" } }, groups: [{ id: "active" }] },
+    "issues/done/0001-a.md": issue({ id: "0001", title: "A", status: "done" }),
+  });
+  for (const args of [[], ["check"]]) {
+    const r = run(root, ...args);
+    assert.equal(r.code, 1, args.join(" "));
+    assert.match(r.stderr, /issues\/done\/0001-a\.md: invalid status \(done\) → open/);
+  }
+  assert.ok(!exists(root, "issues/README.md"));
+});
+
+test("new counts ids in every directory", () => {
+  const root = project({ "issues/old/0007-x.md": issue({ id: "0007", title: "X", status: "open" }) });
+  const r = run(root, "new", "Next");
+  assert.equal(r.code, 0, r.stderr);
+  assert.ok(exists(root, "issues/0008-next.md"));
 });
 
 test("checkCommits verifies hashes with git", () => {

@@ -1,10 +1,10 @@
 // md-issues new "<title>": create an issue file with the next id.
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getValue, parseFrontmatter, updateFrontmatter } from "../frontmatter.js";
 import { ConfigError, UsageError } from "../errors.js";
-import { FILE_NAME, TEMPLATE_FILE, statusDirs } from "../issues.js";
+import { FILE_NAME, TEMPLATE_FILE, markdownFiles } from "../issues.js";
 import { openProject } from "../project.js";
 import { sync } from "../sync.js";
 import { template } from "./init.js";
@@ -66,19 +66,15 @@ export function slugify(title, max = 50) {
   return slug;
 }
 
-/** Highest id among issue file names in every status directory, plus one, zero-padded. */
+/** Highest id among issue file names anywhere in the issue directory, plus one, zero-padded. */
 function nextId(ctx) {
   let max = 0;
   let width = 4;
-  for (const dir of statusDirs(ctx.config)) {
-    const abs = join(ctx.dirAbs, dir);
-    if (!existsSync(abs)) continue;
-    for (const name of readdirSync(abs)) {
-      const m = name.match(FILE_NAME);
-      if (!m) continue;
-      max = Math.max(max, Number(m[1]));
-      width = Math.max(width, m[1].length);
-    }
+  for (const { name } of markdownFiles(ctx)) {
+    const m = name.match(FILE_NAME);
+    if (!m) continue;
+    max = Math.max(max, Number(m[1]));
+    width = Math.max(width, m[1].length);
   }
   return String(max + 1).padStart(width, "0");
 }

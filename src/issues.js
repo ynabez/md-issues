@@ -18,7 +18,32 @@ export function statusDirs(config) {
 }
 
 /**
+ * Every Markdown file under the issue directory, as [{ dir, name }] where `dir` is ""
+ * or "sub/dir/". Hidden directories and node_modules are skipped.
+ */
+export function markdownFiles(ctx) {
+  const out = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(join(ctx.dirAbs, dir), { withFileTypes: true }).sort(byName)) {
+      if (entry.isDirectory()) {
+        if (entry.name !== "node_modules" && !entry.name.startsWith(".")) walk(`${dir}${entry.name}/`);
+      } else if (entry.isFile() && entry.name.endsWith(".md")) {
+        out.push({ dir, name: entry.name });
+      }
+    }
+  };
+  if (existsSync(ctx.dirAbs)) walk("");
+  return out;
+}
+
+/**
  * Read every issue file.
+ *
+ * Files named like issues (NNNN-slug.md) are read wherever they are under the issue
+ * directory, not only in the directories the statuses use. Otherwise an issue left in a
+ * directory that the configuration no longer uses (after renaming done/, say) would
+ * silently drop out of the index. Its status then decides: an unknown status is an
+ * error, a known one moves it to the right place.
  *
  * Returns { issues, problems, warnings }. Each issue:
  *   { id, name, dir, file, path, data, text }
@@ -30,46 +55,27 @@ export function statusDirs(config) {
 export function scanIssues(ctx) {
   const issues = [];
   const problems = [];
-  const dirs = statusDirs(ctx.config);
+  const warnings = [];
+  const known = new Set(statusDirs(ctx.config));
 
-  for (const dir of dirs) {
-    const abs = join(ctx.dirAbs, dir);
-    if (!existsSync(abs)) continue;
-    for (const entry of readdirSync(abs, { withFileTypes: true }).sort(byName)) {
-      if (!entry.isFile() || !entry.name.endsWith(".md") || NOT_ISSUES.has(entry.name)) continue;
-      const file = dir + entry.name;
-      const path = `${ctx.dirRel}/${file}`;
-      if (!FILE_NAME.test(entry.name)) {
-        problems.push({ code: "issue.badName", params: { file: path } });
-        continue;
-      }
-      const text = readFileSync(join(abs, entry.name), "utf8");
-      const fm = parseFrontmatter(text);
-      for (const e of fm.errors) problems.push({ code: e.code, params: { file: path, ...e.params } });
-      if (!fm.data) continue;
-      issues.push({ id: fm.data.id, name: entry.name, dir, file, path, data: fm.data, text });
+  for (const { dir, name } of markdownFiles(ctx)) {
+    const file = dir + name;
+    const path = `${ctx.dirRel}/${file}`;
+    if (!FILE_NAME.test(name)) {
+      // README.md, GUIDE.md and TEMPLATE.md are not issues, wherever they are.
+      if (NOT_ISSUES.has(name) && known.has(dir)) continue;
+      if (known.has(dir)) problems.push({ code: "issue.badName", params: { file: path } });
+      else warnings.push({ code: "issue.unknownDir", params: { file: path } });
+      continue;
     }
+    const text = readFileSync(join(ctx.dirAbs, dir, name), "utf8");
+    const fm = parseFrontmatter(text);
+    for (const e of fm.errors) problems.push({ code: e.code, params: { file: path, ...e.params } });
+    if (!fm.data) continue;
+    issues.push({ id: fm.data.id, name, dir, file, path, data: fm.data, text });
   }
 
-  return { issues, problems, warnings: strayFiles(ctx, dirs) };
-}
-
-/** Markdown files in subdirectories that no status uses. */
-function strayFiles(ctx, dirs) {
-  const known = new Set(dirs);
-  const warnings = [];
-  const walk = (rel) => {
-    const abs = join(ctx.dirAbs, rel);
-    for (const entry of readdirSync(abs, { withFileTypes: true }).sort(byName)) {
-      if (entry.isDirectory()) {
-        if (entry.name !== "node_modules" && !entry.name.startsWith(".")) walk(`${rel}${entry.name}/`);
-      } else if (!known.has(rel) && entry.name.endsWith(".md")) {
-        warnings.push({ code: "issue.unknownDir", params: { file: `${ctx.dirRel}/${rel}${entry.name}` } });
-      }
-    }
-  };
-  if (existsSync(ctx.dirAbs)) walk("");
-  return warnings;
+  return { issues, problems, warnings };
 }
 
 const byName = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);

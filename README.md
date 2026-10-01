@@ -208,7 +208,9 @@ Default statuses and groups:
 - `dir` is relative to the issue directory; `""` keeps issues at the top. It cannot leave the issue directory.
 - Labels default to translations of the names above (or to the name itself).
 - A group with `"summary": true` shows a per-severity breakdown in the summary line.
-- Markdown files in subdirectories that no status uses produce a warning.
+- Issue files are read wherever they are under the issue directory, so an issue left in a
+  directory the configuration no longer uses is moved (or, with an unknown status, reported)
+  rather than dropped from the index. Other Markdown files in such directories produce a warning.
 
 A fuller example:
 
