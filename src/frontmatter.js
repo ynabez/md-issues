@@ -54,11 +54,20 @@ export function parseFrontmatter(text) {
       result.errors.push({ code: "fm.duplicate", params: { key: entry.key } });
       continue;
     }
-    data[entry.key] = entry.value;
+    // defineProperty, so that a key such as __proto__ becomes an ordinary entry.
+    Object.defineProperty(data, entry.key, { value: entry.value, enumerable: true, writable: true, configurable: true });
   }
   result.data = data;
   result.end = end;
   return result;
+}
+
+/**
+ * A frontmatter value, or undefined. Only own entries count: `data.toString` must not
+ * find Object.prototype.toString when an issue has no `toString` key.
+ */
+export function getValue(data, key) {
+  return Object.hasOwn(data, key) ? data[key] : undefined;
 }
 
 /** Parse one frontmatter line. Returns null for blank lines. */

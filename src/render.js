@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { getValue } from "./frontmatter.js";
 import { t } from "./i18n.js";
 import { GUIDE_FILE, asList, compareIssues } from "./issues.js";
 
@@ -54,7 +55,7 @@ function table(config, rows) {
 }
 
 function cell(config, it, field) {
-  const value = it.data[field];
+  const value = getValue(it.data, field);
   switch (field) {
     case "id":
       return `[${value}](${it.file})`;

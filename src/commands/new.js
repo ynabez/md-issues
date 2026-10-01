@@ -2,7 +2,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseFrontmatter, updateFrontmatter } from "../frontmatter.js";
+import { getValue, parseFrontmatter, updateFrontmatter } from "../frontmatter.js";
 import { ConfigError, UsageError } from "../errors.js";
 import { FILE_NAME, TEMPLATE_FILE, statusDirs } from "../issues.js";
 import { openProject } from "../project.js";
@@ -31,10 +31,10 @@ export function newIssue({ args, base, log, warn }) {
   known.delete("title");
 
   const id = nextId(ctx);
-  const changes = { id, title: toValue("title", title) };
+  const changes = Object.assign(Object.create(null), { id, title: toValue("title", title) });
   for (const f of args.fields) {
     if (!known.has(f.key)) throw new UsageError("usage.unknownField", { field: f.key, known: [...known].sort().join(", ") });
-    changes[f.key] = toValue(f.key, f.value, { list: Array.isArray(source.data[f.key]) });
+    changes[f.key] = toValue(f.key, f.value, { list: Array.isArray(getValue(source.data, f.key)) });
   }
 
   const text = updateFrontmatter(source.text, changes);

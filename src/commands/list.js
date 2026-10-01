@@ -1,6 +1,7 @@
 // md-issues list: print issues, optionally filtered. Changes nothing.
 
 import { UsageError } from "../errors.js";
+import { getValue } from "../frontmatter.js";
 import { defaultColumnLabel, t } from "../i18n.js";
 import { asList, compareIssues, scanIssues, validateIssues } from "../issues.js";
 import { openProject } from "../project.js";
@@ -27,7 +28,7 @@ export function listIssues({ args, base, out, warn }) {
     filters.set(f.key, [...(filters.get(f.key) ?? []), f.value]);
   }
   const issues = scan.issues
-    .filter((it) => [...filters].every(([k, values]) => asList(it.data[k]).some((v) => values.includes(v))))
+    .filter((it) => [...filters].every(([k, values]) => asList(getValue(it.data, k)).some((v) => values.includes(v))))
     .sort(compareIssues(config));
 
   if (args.options.json) {
@@ -44,7 +45,7 @@ export function listIssues({ args, base, out, warn }) {
   const rows = [
     fields.map((f) => defaultColumnLabel(config.lang, f)),
     ...issues.map((it) => fields.map((f) =>
-      f === "status" ? config.status[it.data.status]?.label ?? it.data.status : asList(it.data[f]).join(", "))),
+      f === "status" ? config.status[it.data.status]?.label ?? it.data.status : asList(getValue(it.data, f)).join(", "))),
   ];
   const widths = fields.map((_, i) => Math.max(...rows.map((r) => width(r[i]))));
   for (const r of rows) {

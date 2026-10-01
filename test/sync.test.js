@@ -196,3 +196,24 @@ test("openTasks: unchecked items in the listed statuses are errors", () => {
   assert.equal(bad.code, 2);
   assert.match(bad.stderr, /unknown status "closed"/);
 });
+
+test("only configured statuses are valid, even names found on Object.prototype", () => {
+  for (const status of ["toString", "constructor", "__proto__"]) {
+    const root = project({ "issues/0001-a.md": issue({ id: "0001", title: "A", status }) });
+    const r = run(root);
+    assert.equal(r.code, 1, status);
+    assert.match(r.stderr, new RegExp(`invalid status \\(${status}\\)`));
+    assert.ok(exists(root, "issues/0001-a.md"), status);
+  }
+});
+
+test("__proto__ is an ordinary key in frontmatter and config.json", () => {
+  const root = project({
+    "issues/config.json": '{ "keys": [], "fields": { "__proto__": ["x"] } }\n',
+    // Written out: in an object literal, __proto__ would set the prototype instead.
+    "issues/0001-a.md": "---\nid: 0001\ntitle: A\nstatus: open\n__proto__: y\n---\n",
+  });
+  const r = run(root);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /invalid __proto__ \(y\) → x/);
+});

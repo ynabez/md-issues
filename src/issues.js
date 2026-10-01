@@ -2,7 +2,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseFrontmatter } from "./frontmatter.js";
+import { getValue, parseFrontmatter } from "./frontmatter.js";
 import { maskCode } from "./markdown.js";
 
 export const INDEX_FILE = "README.md";
@@ -83,10 +83,11 @@ export function validateIssues(issues, config) {
   for (const it of issues) {
     const d = it.data;
     for (const key of config.required) {
-      if (d[key] === undefined || d[key] === "") add(it, "issue.required", { key });
+      const value = getValue(d, key);
+      if (value === undefined || value === "") add(it, "issue.required", { key });
     }
     for (const key of single) {
-      if (Array.isArray(d[key])) add(it, "issue.notString", { key });
+      if (Array.isArray(getValue(d, key))) add(it, "issue.notString", { key });
     }
     if (config.allowedKeys) {
       for (const key of Object.keys(d)) {
@@ -108,7 +109,7 @@ export function validateIssues(issues, config) {
       add(it, "issue.badSeverity", { value: d.severity, allowed: config.severity.join(" / ") });
     }
     for (const [key, vocab] of Object.entries(config.fields)) {
-      const value = d[key];
+      const value = getValue(d, key);
       if (typeof value !== "string" || !value) continue;
       if (Array.isArray(vocab)) {
         if (!vocab.includes(value)) add(it, "issue.badValue", { key, value, allowed: vocab.join(" / ") });

@@ -92,7 +92,8 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
     groupIds.add(g.id);
   }
 
-  const status = {};
+  // No prototype: a status named "toString" or "__proto__" must not be found unless configured.
+  const status = Object.create(null);
   for (const [name, s] of Object.entries(raw.status ?? DEFAULT_STATUS)) {
     const key = `status.${name}`;
     if (!/^[A-Za-z0-9_-]+$/.test(name)) fail("config.badStatusName", { status: name });
@@ -110,7 +111,7 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
   }
   if (!Object.keys(status).length) fail("config.type", { key: "status", expected: "a non-empty object" });
 
-  const fields = {};
+  const fields = Object.create(null);
   for (const [name, vocab] of Object.entries(raw.fields ?? {})) {
     if (RESERVED_FIELDS.includes(name)) fail("config.reservedField", { field: name });
     if (typeof vocab === "string") {
