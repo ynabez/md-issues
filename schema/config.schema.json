@@ -95,6 +95,11 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "openTasks": {
+      "description": "Statuses (for example [\"done\"]) whose issues must not contain unchecked task list items (- [ ]). Items in code blocks are ignored.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "checkCommits": {
       "description": "With `md-issues check`, verify that every hash in \"commits\" is a commit in the Git repository.",
       "type": "boolean",

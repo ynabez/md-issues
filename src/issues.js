@@ -3,6 +3,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseFrontmatter } from "./frontmatter.js";
+import { maskCode } from "./markdown.js";
 
 export const INDEX_FILE = "README.md";
 export const GUIDE_FILE = "GUIDE.md";
@@ -94,6 +95,9 @@ export function validateIssues(issues, config) {
         add(it, hint ? "issue.unknownKeyHint" : "issue.unknownKey", { key, hint });
       }
     }
+    if (config.openTasks.has(d.status)) {
+      for (const task of openTasks(it.text)) add(it, "issue.openTask", { status: d.status, line: task.line, task: task.text });
+    }
     if (typeof d.id === "string" && d.id && !it.name.startsWith(`${d.id}-`)) {
       add(it, "issue.idMismatch", { id: d.id });
     }
@@ -130,6 +134,16 @@ export function validateIssues(issues, config) {
     }
   }
   return problems;
+}
+
+/** Unchecked task list items (`- [ ] ...`) outside code blocks, with 1-based line numbers. */
+export function openTasks(text) {
+  const tasks = [];
+  maskCode(text, { inline: false }).split("\n").forEach((line, i) => {
+    const m = line.match(/^\s*(?:[-*+]|\d+[.)])\s+\[ \]\s+(.*?)\s*$/);
+    if (m) tasks.push({ line: i + 1, text: m[1] });
+  });
+  return tasks;
 }
 
 /** The candidate within edit distance 2 of `word`, for "did you mean" hints. */

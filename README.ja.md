@@ -167,6 +167,7 @@ md-issues list --json
 | `columns` | `id, title, severity, status` | 一覧の列: 項目名か `{ "label", "fields": [...] }`（値を空白でつなぐ） |
 | `linkFiles` | `[]` | リンクを張りなおして検証するほかのファイル。`*`・`**`・`?` が使えます |
 | `checkCommits` | `false` | `md-issues check` のとき、`commits` の各ハッシュを Git で確かめます |
+| `openTasks` | `[]` | 未完了の項目（`- [ ]`）を残してはいけない status（`["done"]` など）。残件を残したまま閉じた課題を拾えます。コードブロックの中は数えません |
 | `keys` | なし | 課題で使ってよい追加のキー。書くと、それ以外のキーをエラーにします（`relatd` のような打ち間違いを拾えます）。上の設定で使っているキーと `related`・`commits` は書かなくても使えます |
 
 既定の status とグループ:

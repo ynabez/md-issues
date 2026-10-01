@@ -173,3 +173,26 @@ test("keys: unknown frontmatter keys are errors only when declared", () => {
   const strict = project({ ...files, "issues/config.json": { keys: [] } });
   assert.match(run(strict).stderr, /unknown key blocked_by \(add it to "keys" in config\.json/);
 });
+
+test("openTasks: unchecked items in the listed statuses are errors", () => {
+  const body = "\n## Left\n\n- [x] done\n- [ ] still to do\n\n```\n- [ ] example\n```\n";
+  const files = {
+    "issues/done/0001-a.md": issue({ id: "0001", title: "A", status: "done" }, body),
+    "issues/0002-b.md": issue({ id: "0002", title: "B", status: "open" }, body),
+  };
+  assert.equal(run(project(files)).code, 0);
+
+  const root = project({ ...files, "issues/config.json": { openTasks: ["done"] } });
+  const r = run(root);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /issues\/done\/0001-a\.md:10: unchecked task in a done issue → still to do/);
+  assert.doesNotMatch(r.stderr, /0002|example/);
+
+  const set = run(root, "set", "2", "status=done");
+  assert.equal(set.code, 1);
+  assert.match(set.stderr, /0002-b\.md:10/);
+
+  const bad = run(project({ ...files, "issues/config.json": { openTasks: ["closed"] } }));
+  assert.equal(bad.code, 2);
+  assert.match(bad.stderr, /unknown status "closed"/);
+});

@@ -12,7 +12,7 @@ export const CORE_KEYS = ["id", "title", "status"];
 
 export const CONFIG_KEYS = [
   "$schema", "lang", "status", "groups", "required", "severity",
-  "fields", "columns", "linkFiles", "checkCommits", "keys",
+  "fields", "columns", "linkFiles", "checkCommits", "keys", "openTasks",
 ];
 
 /** Keys every issue may have, whatever `keys` says. */
@@ -76,6 +76,7 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
   expect("linkFiles", isStringArray, "an array of strings");
   expect("checkCommits", (v) => typeof v === "boolean", "true or false");
   expect("keys", isStringArray, "an array of strings");
+  expect("openTasks", isStringArray, "an array of status names");
 
   // Groups first: statuses refer to them.
   const groups = (raw.groups ?? DEFAULT_GROUPS).map((g, i) => {
@@ -120,6 +121,10 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
     fields[name] = vocab;
   }
 
+  for (const name of raw.openTasks ?? []) {
+    if (!status[name]) fail("config.unknownStatus", { key: "openTasks", status: name });
+  }
+
   const severity = raw.severity ?? null;
   const columns = normalizeColumns(raw.columns, { lang, severity, fail });
 
@@ -133,6 +138,7 @@ export function normalizeConfig(raw, file = CONFIG_FILE) {
     columns,
     linkFiles: raw.linkFiles ?? [],
     checkCommits: raw.checkCommits ?? false,
+    openTasks: new Set(raw.openTasks ?? []),
     // Only when `keys` is given: every key an issue may use. Keys the configuration
     // already mentions are included, so `keys` only lists the extra ones.
     allowedKeys: raw.keys
