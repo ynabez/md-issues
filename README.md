@@ -124,11 +124,13 @@ md-issues set 12 severity=           # an empty value removes the key
 
 ```bash
 md-issues list --status open --status doing --severity high
+md-issues list --related 0006        # issues that list 0006 in related
 md-issues list --json
 ```
 
 - The same key given twice matches either value; different keys must all match.
-- List fields (`related`, `commits`) match when they contain the value.
+- List fields (`related`, `commits`) match when they contain the value. `list --related <id>`
+  therefore shows the issues that refer to `<id>` in `related`, for example before deleting it.
 - `--json` prints the frontmatter of each issue plus `group` and `path`.
 
 ## Where things are

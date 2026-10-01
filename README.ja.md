@@ -124,11 +124,13 @@ md-issues set 12 severity=           # 値を空にするとキーを消す
 
 ```bash
 md-issues list --status open --status doing --severity 高
+md-issues list --related 0006        # related に 0006 を書いている課題
 md-issues list --json
 ```
 
 - 同じキーを複数指定したら OR、違うキーは AND で絞りこみます
-- 配列の項目（`related`・`commits`）は、その値を含んでいれば一致します
+- 配列の項目（`related`・`commits`）は、その値を含んでいれば一致します。そのため
+  `list --related <id>` で、`related` に `<id>` を書いている課題が分かります（削除する前の確認など）
 - `--json` は各課題の frontmatter に `group` と `path` を足して出力します
 
 ## 場所の決まりかた
