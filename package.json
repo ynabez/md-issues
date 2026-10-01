@@ -1,6 +1,6 @@
 {
   "name": "md-issues",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Manage issues as Markdown files in your repository: validate frontmatter, move closed issues, rewrite links and generate an index.",
   "license": "MIT",
   "author": "ynabez",
