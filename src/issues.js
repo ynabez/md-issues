@@ -136,6 +136,14 @@ export function validateIssues(issues, config) {
   return problems;
 }
 
+/** Find by exact id, or by number ("31" finds "0031"). */
+export function findIssue(issues, id) {
+  return (
+    issues.find((it) => it.data.id === id) ??
+    (/^\d+$/.test(id) ? issues.find((it) => /^\d+$/.test(it.data.id ?? "") && Number(it.data.id) === Number(id)) : undefined)
+  );
+}
+
 /** Unchecked task list items (`- [ ] ...`) outside code blocks, with 1-based line numbers. */
 export function openTasks(text) {
   const tasks = [];

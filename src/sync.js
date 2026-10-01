@@ -83,7 +83,7 @@ export function sync(ctx, { check = false, log, warn, transform } = {}) {
 }
 
 /** linkFiles from config.json, expanded. Missing files and empty globs are errors. */
-function expandLinkFiles(ctx) {
+export function expandLinkFiles(ctx) {
   const file = `${ctx.dirRel}/${CONFIG_FILE}`;
   const out = [];
   for (const pattern of ctx.config.linkFiles) {
@@ -101,7 +101,7 @@ function expandLinkFiles(ctx) {
 }
 
 /** Files whose links are rewritten and checked (root-relative). Never the index. */
-function linkTargets(ctx, issues, linkFiles) {
+export function linkTargets(ctx, issues, linkFiles) {
   const own = [GUIDE_FILE, TEMPLATE_FILE]
     .map((f) => `${ctx.dirRel}/${f}`)
     .filter((f) => existsSync(join(ctx.root, f)));
@@ -199,7 +199,7 @@ function checkCommits(ctx, issues) {
     .map((p) => ({ code: "commit.missing", params: { file: p.it.path, hash: p.hash } }));
 }
 
-function decode(target) {
+export function decode(target) {
   try {
     return decodeURI(target);
   } catch {

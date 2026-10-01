@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseFrontmatter, updateFrontmatter } from "../frontmatter.js";
 import { UsageError } from "../errors.js";
-import { scanIssues } from "../issues.js";
+import { findIssue, scanIssues } from "../issues.js";
 import { openProject } from "../project.js";
 import { loadIssues, sync } from "../sync.js";
 import { toValue } from "./fields.js";
@@ -39,12 +39,4 @@ export function setIssue({ args, base, log, warn }) {
   }
   sync(ctx, { log, warn });
   return 0;
-}
-
-/** Find by exact id, or by number ("31" finds "0031"). */
-export function findIssue(issues, id) {
-  return (
-    issues.find((it) => it.data.id === id) ??
-    (/^\d+$/.test(id) ? issues.find((it) => /^\d+$/.test(it.data.id ?? "") && Number(it.data.id) === Number(id)) : undefined)
-  );
 }
