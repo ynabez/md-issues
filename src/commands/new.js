@@ -1,12 +1,12 @@
 // md-issues new "<title>": create an issue file with the next id.
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { getValue, parseFrontmatter, updateFrontmatter } from "../frontmatter.js";
 import { ConfigError, UsageError } from "../errors.js";
 import { FILE_NAME, TEMPLATE_FILE, statusDirs } from "../issues.js";
 import { openProject } from "../project.js";
-import { loadIssues, sync } from "../sync.js";
+import { sync } from "../sync.js";
 import { template } from "./init.js";
 import { LIST_KEYS, toValue } from "./fields.js";
 
@@ -43,13 +43,14 @@ export function newIssue({ args, base, log, warn }) {
   const name = `${id}-${slug}.md`;
   const issue = { id, name, dir, file: dir + name, path: `${ctx.dirRel}/${dir}${name}`, data, text };
 
-  // Validate together with the existing issues before writing anything.
-  loadIssues(ctx, (issues) => [...issues, issue]);
-
-  mkdirSync(join(ctx.dirAbs, dir), { recursive: true });
-  writeFileSync(join(ctx.dirAbs, dir, name), text);
-  log("result.created", { path: issue.path });
-  sync(ctx, { log, warn });
+  // Validated together with the existing issues; written only if everything passes.
+  sync(ctx, {
+    log,
+    warn,
+    transform: (issues) => [...issues, issue],
+    writes: [{ path: issue.path, text }],
+    onCommit: () => log("result.created", { path: issue.path }),
+  });
   return 0;
 }
 

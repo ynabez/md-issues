@@ -217,3 +217,48 @@ test("__proto__ is an ordinary key in frontmatter and config.json", () => {
   assert.equal(r.code, 1);
   assert.match(r.stderr, /invalid __proto__ \(y\) → x/);
 });
+
+test("nothing is written when validation fails after moving", () => {
+  const root = project({
+    "issues/0001-a.md": issue({ id: "0001", title: "A", status: "done" }, "\n[bad](missing.md) [b](0002-b.md)\n"),
+    "issues/0002-b.md": issue({ id: "0002", title: "B", status: "open" }, "\n[a](0001-a.md)\n"),
+  });
+  const before = { a: read(root, "issues/0001-a.md"), b: read(root, "issues/0002-b.md") };
+  const r = run(root);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /link target does not exist/);
+  assert.doesNotMatch(r.stdout, /Moved/);
+  assert.equal(read(root, "issues/0001-a.md"), before.a);
+  assert.equal(read(root, "issues/0002-b.md"), before.b);
+  assert.ok(!exists(root, "issues/done"));
+  assert.ok(!exists(root, "issues/README.md"));
+});
+
+test("new and set leave no changes behind when validation fails", () => {
+  const root = project({
+    "issues/0001-a.md": issue({ id: "0001", title: "A", status: "open" }, "\n[bad](missing.md)\n"),
+  });
+  const before = read(root, "issues/0001-a.md");
+
+  const n = run(root, "new", "Second");
+  assert.equal(n.code, 1);
+  assert.doesNotMatch(n.stdout, /Created/);
+  assert.ok(!exists(root, "issues/0002-second.md"));
+
+  const s = run(root, "set", "1", "status=done");
+  assert.equal(s.code, 1);
+  assert.doesNotMatch(s.stdout, /Updated/);
+  assert.equal(read(root, "issues/0001-a.md"), before);
+  assert.ok(!exists(root, "issues/done"));
+});
+
+test("links are checked against the state after the move", () => {
+  const root = project({
+    "issues/0001-a.md": issue({ id: "0001", title: "A", status: "done" }, "\n[docs](../docs/x.md) [b](0002-b.md#b)\n"),
+    "issues/0002-b.md": issue({ id: "0002", title: "B", status: "open" }, "\n## B\n"),
+    "docs/x.md": "# X\n",
+  });
+  const r = run(root);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(read(root, "issues/done/0001-a.md"), /\(\.\.\/\.\.\/docs\/x\.md\) \[b\]\(\.\.\/0002-b\.md#b\)/);
+});

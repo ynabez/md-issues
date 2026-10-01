@@ -1,14 +1,15 @@
 // The main pipeline: validate, move issues, rewrite and check links, generate the index.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, join, posix } from "node:path";
+import { existsSync } from "node:fs";
+import { join, posix } from "node:path";
 import { CONFIG_FILE } from "./config.js";
 import { ConfigError, ValidationError } from "./errors.js";
 import { expandGlob, hasGlob } from "./glob.js";
 import { GUIDE_FILE, TEMPLATE_FILE, asList, scanIssues, validateIssues } from "./issues.js";
 import { findLinks, hasAnchor, rewriteLinks } from "./markdown.js";
 import { buildIndex } from "./render.js";
+import { Workspace } from "./workspace.js";
 
 /**
  * Load and validate every issue. Throws ValidationError on problems.
@@ -25,9 +26,17 @@ export function loadIssues(ctx, transform) {
 /**
  * Run the pipeline.
  *   check: true → change nothing; fail when something would change.
+ *   transform(issues) → issues: in-memory changes to validate (new / set)
+ *   writes: [{ path, text }] files to write with them (root-relative)
+ *   onCommit(): called right after the changes have been written
  * `log(code, params)` receives progress messages, `warn(code, params)` warnings.
+ *
+ * Nothing is written unless every check passes.
  */
-export function sync(ctx, { check = false, log, warn, transform } = {}) {
+export function sync(ctx, { check = false, log, warn, transform, writes = [], onCommit } = {}) {
+  const ws = new Workspace(ctx.root);
+  for (const w of writes) ws.write(w.path, w.text);
+
   const { issues, warnings } = loadIssues(ctx, transform);
   for (const w of warnings) warn(w.code, w.params);
 
@@ -46,39 +55,39 @@ export function sync(ctx, { check = false, log, warn, transform } = {}) {
   }
 
   if (!check) {
-    const conflicts = moves.filter((m) => existsSync(join(ctx.root, m.to)));
+    const conflicts = moves.filter((m) => ws.exists(m.to));
     if (conflicts.length) {
       throw new ValidationError(conflicts.map((m) => ({ code: "issue.moveConflict", params: { from: m.from, to: m.to } })));
     }
     for (const m of moves) {
-      mkdirSync(dirname(join(ctx.root, m.to)), { recursive: true });
-      renameSync(join(ctx.root, m.from), join(ctx.root, m.to));
+      ws.move(m.from, m.to);
       Object.assign(m.it, { dir: m.want, file: m.want + m.it.name, path: m.to });
     }
     // Always run, so that hand-written links that miss done/ are fixed too.
-    relink(ctx, issues, linkFiles, new Map(moves.map((m) => [m.from, m.to])));
-    for (const m of moves) log("result.moved", { from: m.from, to: m.to });
+    relink(ctx, ws, issues, linkFiles, new Map(moves.map((m) => [m.from, m.to])));
   }
 
+  // Checked against the pending state: moved files, rewritten links, the new index.
   const index = buildIndex(ctx, issues);
   const problems = [
-    ...checkLinks(ctx, linkTargets(ctx, issues, linkFiles)),
-    ...checkLinks(ctx, [ctx.indexRel], { [ctx.indexRel]: index }),
+    ...checkLinks(ws, linkTargets(ctx, issues, linkFiles)),
+    ...checkLinks(ws, [ctx.indexRel], { [ctx.indexRel]: index }),
     ...(check && ctx.config.checkCommits ? checkCommits(ctx, issues) : []),
   ];
   if (problems.length) throw new ValidationError(problems);
 
-  const indexAbs = join(ctx.root, ctx.indexRel);
-  const current = existsSync(indexAbs) ? readFileSync(indexAbs, "utf8") : null;
+  const current = ws.exists(ctx.indexRel) ? ws.read(ctx.indexRel) : null;
   if (check) {
     if (current !== index) throw new ValidationError([{ code: "result.stale", params: { index: ctx.indexRel, cmd: ctx.cmd } }]);
     log("result.checkOk", { n: issues.length });
-  } else if (current !== index) {
-    writeFileSync(indexAbs, index);
-    log("result.generated", { index: ctx.indexRel, n: issues.length });
-  } else {
-    log("result.upToDate", { index: ctx.indexRel, n: issues.length });
+    return issues;
   }
+
+  if (current !== index) ws.write(ctx.indexRel, index);
+  ws.commit();
+  onCommit?.();
+  for (const m of moves) log("result.moved", { from: m.from, to: m.to });
+  log(current !== index ? "result.generated" : "result.upToDate", { index: ctx.indexRel, n: issues.length });
   return issues;
 }
 
@@ -119,14 +128,13 @@ export function linkTargets(ctx, issues, linkFiles) {
  * Links into the issue directory that name an issue file are matched by file name, so
  * writers do not have to care whether the issue is in done/ yet.
  */
-function relink(ctx, issues, linkFiles, moved) {
+function relink(ctx, ws, issues, linkFiles, moved) {
   const back = new Map([...moved].map(([from, to]) => [to, from]));
   const byName = new Map(issues.map((it) => [it.name, it.path]));
   const inDir = (p) => p.startsWith(`${ctx.dirRel}/`);
 
   for (const rel of linkTargets(ctx, issues, linkFiles)) {
-    const abs = join(ctx.root, rel);
-    const text = readFileSync(abs, "utf8");
+    const text = ws.read(rel);
     const base = posix.dirname(back.get(rel) ?? rel);
     const out = rewriteLinks(text, ({ target }) => {
       if (!target) return null;
@@ -137,7 +145,7 @@ function relink(ctx, issues, linkFiles, moved) {
       if (!next || posix.join(posix.dirname(rel), decode(target)) === dest) return null;
       return /%[0-9a-f]{2}/i.test(target) ? encodeURI(next) : next;
     });
-    if (out !== text) writeFileSync(abs, out);
+    if (out !== text) ws.write(rel, out);
   }
 }
 
@@ -145,14 +153,9 @@ function relink(ctx, issues, linkFiles, moved) {
  * Check relative links in `files`: empty links, missing .md targets and missing heading
  * anchors. `contents` supplies text for files not written yet (the index).
  */
-function checkLinks(ctx, files, contents = {}) {
+function checkLinks(ws, files, contents = {}) {
   const problems = [];
-  const cache = new Map();
-  const readText = (rel) => {
-    if (contents[rel] !== undefined) return contents[rel];
-    if (!cache.has(rel)) cache.set(rel, readFileSync(join(ctx.root, rel), "utf8"));
-    return cache.get(rel);
-  };
+  const readText = (rel) => (contents[rel] !== undefined ? contents[rel] : ws.read(rel));
 
   for (const rel of files) {
     const text = readText(rel);
@@ -168,7 +171,7 @@ function checkLinks(ctx, files, contents = {}) {
       }
       if (!link.target.endsWith(".md")) continue;
       const dest = posix.join(posix.dirname(rel), decode(link.target));
-      if (!existsSync(join(ctx.root, dest))) {
+      if (!ws.exists(dest)) {
         problems.push({ code: "link.missing", params: { file: rel, target: shown } });
       } else if (link.anchor && !hasAnchor(readText(dest), link.anchor)) {
         problems.push({ code: "link.anchor", params: { file: rel, target: shown } });
