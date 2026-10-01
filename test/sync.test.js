@@ -262,3 +262,10 @@ test("links are checked against the state after the move", () => {
   assert.equal(r.code, 0, r.stderr);
   assert.match(read(root, "issues/done/0001-a.md"), /\(\.\.\/\.\.\/docs\/x\.md\) \[b\]\(\.\.\/0002-b\.md#b\)/);
 });
+
+test("counts of one are singular in English", () => {
+  const root = project({ "issues/0001-a.md": issue({ id: "0001", title: "A", status: "open" }) });
+  assert.match(run(root).stdout, /Generated issues\/README\.md \(1 issue\)/);
+  assert.match(run(root, "check").stdout, /Check passed \(1 issue\)/);
+  assert.match(read(root, "issues/README.md"), /^1 issue — Open 1/m);
+});
