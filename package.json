@@ -1,7 +1,7 @@
 {
   "name": "md-issues",
   "version": "0.2.3",
-  "description": "Manage issues as Markdown files in your repository: validate frontmatter, move closed issues, rewrite links and generate an index.",
+  "description": "Track issues as Markdown files in your repo — validated frontmatter, auto-moved closed issues, links that never break, and a generated index.",
   "license": "MIT",
   "author": "ynabez",
   "type": "module",
