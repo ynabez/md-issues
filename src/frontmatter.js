@@ -6,8 +6,10 @@
 //   key: [a, b]
 //
 // Every value stays a string; nothing is converted to numbers, booleans or dates.
-// ` # ...` after a value is a comment. Quotes, multi-line values, nesting and anchors
-// are not supported (quotes are kept as part of the value).
+// ` # ...` after a value is a comment. A value that starts with `#` is a value, not a
+// comment: a comment with no value before it says nothing, and titles such as
+// `#k7-10s ...` would otherwise read as empty. Quotes, multi-line values, nesting and
+// anchors are not supported (quotes are kept as part of the value).
 //
 // A YAML parser is intentionally not used: it would read `id: 0031` as 31 and some
 // commit hashes (`4505e41`) as floats.
@@ -79,7 +81,11 @@ export function parseLine(line) {
   if (!KEY.test(key)) return { error: "fm.badKey" };
 
   const rest = line.slice(i + 1);
-  const comment = rest.match(COMMENT)?.[0] ?? "";
+  // Look for a comment only after the first character of the value, so that a value
+  // starting with "#" stays a value.
+  const from = rest.length - rest.trimStart().length + 1;
+  const at = rest.slice(from).search(COMMENT);
+  const comment = at === -1 ? "" : rest.slice(from + at);
   const raw = rest.slice(0, rest.length - comment.length).trim();
   return { key, value: parseValue(raw), comment };
 }

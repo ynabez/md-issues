@@ -76,6 +76,9 @@ The frontmatter is **not YAML**. A YAML parser would read `id: 0031` as the numb
 - **Every value is a string.** Nothing is converted.
 - ` # ...` after a value is a comment. A `#` preceded by whitespace therefore starts a comment
   (`title: Fix #12` reads as `Fix`); `new` and `set` refuse such values.
+- A value that starts with `#` is a value, not a comment: `title: #k7-10s gap` reads as
+  `#k7-10s gap`. So a key cannot be left empty with only a comment after it (`key:  # hint`
+  reads as `# hint`).
 - Quotes, multi-line values, nesting and anchors are not supported (quotes stay in the value).
 - Blank lines are ignored. A line without `:` is an error.
 

@@ -53,3 +53,14 @@ test("detects values that do not round-trip", () => {
   assert.equal(isRepresentable(["a", "b"]), true);
   assert.equal(isRepresentable(["a,b"]), false);
 });
+
+test("a value starting with # is a value, and may still have a comment", () => {
+  const fm = parseFrontmatter("---\ntitle: #k7-10s gap\nanchor: #top   # the page top\nhint:   # only\n---\n");
+  assert.deepEqual(fm.data, { title: "#k7-10s gap", anchor: "#top", hint: "# only" });
+  assert.equal(isRepresentable("#k7-10s gap"), true);
+  assert.equal(isRepresentable("#a #b"), false);
+  assert.equal(
+    updateFrontmatter("---\nanchor: #top   # the page top\n---\n", { anchor: "#bottom" }),
+    "---\nanchor: #bottom   # the page top\n---\n",
+  );
+});
