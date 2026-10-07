@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getValue, parseFrontmatter, updateFrontmatter } from "../frontmatter.js";
 import { ConfigError, UsageError } from "../errors.js";
+import { t } from "../i18n.js";
 import { FILE_NAME, TEMPLATE_FILE, markdownFiles } from "../issues.js";
 import { openProject } from "../project.js";
 import { sync } from "../sync.js";
@@ -39,6 +40,17 @@ export function newIssue({ args, base, log, warn }) {
 
   const text = updateFrontmatter(source.text, changes);
   const data = parseFrontmatter(text).data;
+
+  // Name the options to add, instead of a validation error about the file. Everything
+  // shown comes from the project's config.json.
+  const missing = ctx.config.required.filter((key) => {
+    const value = getValue(data, key);
+    return value === undefined || value === "";
+  });
+  if (missing.length) {
+    const options = missing.map((key) => `\n  --${key} ${valueHint(ctx.config, key)}`).join("");
+    throw new UsageError("usage.newMissing", { options });
+  }
   const dir = ctx.config.status[data.status]?.dir ?? "";
   const name = `${id}-${slug}.md`;
   const issue = { id, name, dir, file: dir + name, path: `${ctx.dirRel}/${dir}${name}`, data, text };
@@ -52,6 +64,14 @@ export function newIssue({ args, base, log, warn }) {
     onCommit: () => log("result.created", { path: issue.path }),
   });
   return 0;
+}
+
+/** "<a | b>" from the configured vocabulary of `key`, or a generic placeholder. */
+function valueHint(config, key) {
+  const vocab = key === "severity" ? config.severity : config.fields[key];
+  if (Array.isArray(vocab) && vocab.length) return `<${vocab.join(" | ")}>`;
+  if (typeof vocab === "string") return t("hint.pattern", { pattern: vocab });
+  return t("hint.value");
 }
 
 /** File name part from a title: ASCII letters and digits joined by hyphens. */

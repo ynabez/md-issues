@@ -83,3 +83,23 @@ test("set validates before writing", () => {
   assert.equal(run(root, "set", "0001", "oops").code, 2);
   assert.equal(run(root, "set", "0001").code, 2);
 });
+
+test("new names the options for missing required values from config.json", () => {
+  const root = project({
+    "issues/config.json": {
+      severity: ["high", "low"],
+      required: ["severity", "area", "origin", "owner"],
+      fields: { area: ["api", "ui"], origin: "^T\\d+$" },
+    },
+    "issues/TEMPLATE.md": "---\nid: \ntitle: \nstatus: open\nseverity: \narea: \norigin: \nowner: \n---\n",
+  });
+  const r = run(root, "new", "Thing", "--area", "ui");
+  assert.equal(r.code, 2);
+  assert.match(r.stderr, /required values are missing\. Add these options:\n  --severity <high \| low>\n  --origin <value matching \/\^T\\d\+\$\/>\n  --owner <value>\n/);
+  assert.doesNotMatch(r.stderr, /--area/);
+  assert.ok(!exists(root, "issues/0001-thing.md"));
+
+  const ok = run(root, "new", "Thing", "--area", "ui", "--severity", "low", "--origin", "T1", "--owner", "me");
+  assert.equal(ok.code, 0, ok.stderr);
+  assert.ok(exists(root, "issues/0001-thing.md"));
+});

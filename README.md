@@ -107,6 +107,8 @@ Common options:
   (for example a Japanese title), pass `--slug <slug>`.
 - The file is copied from `TEMPLATE.md` (or a built-in template) with `id` and `title` filled in.
 - `--<key> <value>` sets initial values: `--status doing --severity high --related 0001,0002`.
+- When a required key has no value, nothing is written and the error lists the options to add,
+  with the allowed values from `config.json` (exit code 2).
 - The new issue is validated together with the others before anything is written.
 
 ### `set`
