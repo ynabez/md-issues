@@ -3,7 +3,8 @@
 import { readFileSync } from "node:fs";
 import { ConfigError, UsageError, ValidationError } from "./errors.js";
 import { t } from "./i18n.js";
-import { openProject } from "./project.js";
+import { openDocuments, openProject } from "./project.js";
+import { checkSpecs } from "./checks/specs.js";
 import { sync } from "./sync.js";
 import { init } from "./commands/init.js";
 import { newIssue } from "./commands/new.js";
@@ -17,7 +18,8 @@ const HELP = `Usage: md-issues [command] [options]
 
 Commands:
   (none)                        Validate, move issues, rewrite links and generate the index
-  check                         Validate only; change nothing (for CI and pre-commit)
+  check [issues|specs]          Check issues and specifications (or one of them);
+                                change nothing (for CI and pre-commit)
   init                          Create the issue directory with config.json, GUIDE.md,
                                 TEMPLATE.md and README.md (existing files are kept).
                                 With --dir, the directory is saved to package.json
@@ -137,9 +139,44 @@ export function parseArgs(argv) {
 }
 
 /** md-issues check: the full pipeline without writing anything. */
+const CHECKS = ["issues", "specs"];
+
+/**
+ * md-issues check [issues|specs]: run the checks without writing anything.
+ * Every part runs even when an earlier one fails, so that one run shows everything.
+ * A configuration error still stops at once.
+ */
 function check({ args, base, log, warn }) {
-  if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
-  sync(openProject(base), { check: true, log, warn });
+  const [part, ...extra] = args.positionals;
+  if (extra.length) throw new UsageError("usage.extraArgs", { arg: extra[0] });
+  if (part !== undefined && !CHECKS.includes(part)) throw new UsageError("usage.unknownCheck", { part, known: CHECKS.join(" | ") });
+
+  const problems = [];
+  const seen = new Set();
+  const collect = (fn) => {
+    try {
+      fn();
+    } catch (e) {
+      if (!(e instanceof ValidationError)) throw e;
+      for (const p of e.problems) {
+        // The same problem may be found by more than one check; report it once.
+        const key = JSON.stringify([p.code, String(p.params?.file ?? "").replace(/:\d+$/, ""), p.params?.target ?? p.params]);
+        if (!seen.has(key)) {
+          seen.add(key);
+          problems.push(p);
+        }
+      }
+    }
+  };
+  for (const name of part ? [part] : CHECKS) {
+    if (name === "issues") {
+      collect(() => sync(openProject(base), { check: true, log, warn }));
+    } else {
+      const ctx = openDocuments(base);
+      collect(() => checkSpecs(ctx, { log }));
+    }
+  }
+  if (problems.length) throw new ValidationError(problems);
   return 0;
 }
 
