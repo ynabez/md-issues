@@ -2,15 +2,26 @@
 
 [English](README.md)
 
-課題をリポジトリの中の Markdown ファイルとして管理します。`md-issues` は frontmatter を検証し、
-手が離れた課題を下の階層へ移し、相対リンクを保ったまま一覧を生成します。
+課題・仕様・そのほかの文書を、リポジトリの中の Markdown ファイルとして管理します。
+`md-issues` は課題の frontmatter を検証し、手が離れた課題を下の階層へ移し、相対リンクを
+保ったまま一覧を生成します。仕様と文書も検査します。
 
-- 1 課題 = 1 ファイル: `issues/0001-slug.md`
-- 未対応の課題だけが `issues/` の直下に残り、`done` は `issues/done/`、`wontfix` は `issues/wontfix/` へ移ります
+- 1 課題 = 1 ファイル: `docs/issues/0001-slug.md`
+- 未対応の課題だけが `docs/issues/` の直下に残り、`done` は `docs/issues/done/`、`wontfix` は `docs/issues/wontfix/` へ移ります
 - 移動した課題への相対リンクは自動で張りなおします
-- `issues/README.md` は frontmatter から生成するので、実体とずれません
+- `docs/issues/README.md` は frontmatter から生成するので、実体とずれません
+- `docs/specs/` の仕様: 要件の ID・受け入れ条件・ID への参照を検査します
+- `docs/` の文書: リンク・見出しへのアンカー・禁止する語を検査します
 - CI や pre-commit 向けの `md-issues check`
 - 実行時の依存パッケージはありません
+
+```text
+docs/
+  config.json        文書の検査の設定（無くてよい）
+  issues/            課題（config.json・GUIDE.md・TEMPLATE.md。README.md は生成物）
+  specs/             仕様（config.json は無くてよい）
+  plans/ など        そのほかの文書。文書として検査する
+```
 
 ## 導入
 
@@ -35,12 +46,12 @@ Node.js 18 以上が必要です。
 ## はじめかた
 
 ```bash
-npx md-issues init --lang ja               # issues/ と config.json・GUIDE.md・TEMPLATE.md・README.md を作る
-npx md-issues new "Fix the login redirect" # issues/0001-fix-the-login-redirect.md を作る
-npx md-issues set 1 status=done            # frontmatter を書きかえ、issues/done/ へ移す
+npx md-issues init --lang ja               # docs/issues/ と config.json・GUIDE.md・TEMPLATE.md・README.md を作る
+npx md-issues new "Fix the login redirect" # docs/issues/0001-fix-the-login-redirect.md を作る
+npx md-issues set 1 status=done            # frontmatter を書きかえ、docs/issues/done/ へ移す
 npx md-issues list --status open           # 未対応の課題を表示する
 npm run issues                             # 検証・移動・リンクの張りなおし・一覧の生成
-npm run check:issues                       # 同じ検証を、何も書きかえずに行う
+npm run check:issues                       # 課題・仕様・文書を、何も書きかえずに検査する
 ```
 
 ## 課題ファイル
@@ -70,6 +81,7 @@ related: [0002, 0005]
 
 frontmatter は **YAML ではありません**。YAML として読むと `id: 0031` が数値の 31 に、
 `commits: [4505e41]` が浮動小数になるため、次の規則だけを持つ小さなパーサーで読みます。
+**課題・仕様のほか、md-issues が読む文書はすべて同じ規則で読みます。**
 
 - ファイルの先頭を `---` にし、次の `---` の行で閉じます
 - 1 行 1 項目。`キー: 値` か `キー: [a, b]`（カンマ区切りの配列）だけです
@@ -87,7 +99,8 @@ frontmatter は **YAML ではありません**。YAML として読むと `id: 00
 | コマンド | 動作 |
 | --- | --- |
 | `md-issues` | 検証し、status が示す置き場所へ移し、リンクを張りなおして検証し、一覧を生成する |
-| `md-issues check` | 検証だけ行う。置き場所がずれている・一覧が古いときも失敗する |
+| `md-issues check` | 課題・仕様・文書を検査する。何も書きかえない。置き場所がずれている・一覧が古いときも失敗する |
+| `md-issues check issues` / `specs` / `docs` | 3 つの検査のうち 1 つだけを行う |
 | `md-issues init` | 課題ディレクトリと `config.json`・`GUIDE.md`・`TEMPLATE.md`・`README.md` を作る。既存のファイルは上書きしない。`--lang ja` で日本語のファイルを作る |
 | `md-issues new "<タイトル>"` | `TEMPLATE.md` から次の番号の課題を作る |
 | `md-issues set <id> <キー>=<値> ...` | 1 件の課題の frontmatter を書きかえ、移動と一覧の生成まで行う |
@@ -98,7 +111,7 @@ frontmatter は **YAML ではありません**。YAML として読むと `id: 00
 
 | オプション | 意味 |
 | --- | --- |
-| `--dir`, `-d <パス>` | 課題ディレクトリ（root からの相対） |
+| `--dir`, `-d <パス>` | 課題ディレクトリ（root からの相対。課題のコマンドだけ） |
 | `--root <パス>` | プロジェクトの root |
 | `--help`, `-h` | 使いかたを表示する |
 | `--version`, `-v` | 版を表示する |
@@ -143,7 +156,7 @@ md-issues list --json
 
 ```bash
 md-issues refs 0006
-# related  issues/0009-x.md
+# related  docs/issues/0009-x.md
 # リンク   docs/notes.md:12
 md-issues refs 6 --json
 ```
@@ -162,16 +175,26 @@ md-issues refs 6 --json
 3. 上へたどって、最初に見つかった `package.json` のディレクトリ
 4. Git の作業ツリーの root
 
-### 課題ディレクトリ
+### ディレクトリ
 
-1. `--dir`
-2. root の `package.json` の `"issues": { "dir": "..." }`
-3. `issues/`
+| ディレクトリ | 既定 | root の `package.json` での指定 |
+| --- | --- | --- |
+| 課題 | `docs/issues/` | `"issues": { "dir": "..." }`（または `--dir`） |
+| 仕様 | `docs/specs/` | `"issues": { "specsDir": "..." }` |
+| 文書 | `docs/` | `"issues": { "docsDir": "..." }` |
 
-`md-issues init --dir docs/tasks` はディレクトリを `package.json` に書きこむので、
-以後は `--dir` なしで使えます。課題ディレクトリは root の中に置きます。
+`md-issues init --dir tasks` は課題ディレクトリを `package.json` に書きこむので、
+以後は `--dir` なしで使えます。ディレクトリは root の中に置きます。仕様や文書の
+ディレクトリが無いのはエラーではなく、その検査はすることがありません。
+
+**0.2 からの移行:** 課題ディレクトリの既定は `issues/` でした。そのまま使うなら
+`package.json` に `"issues": { "dir": "issues" }` を足し、そうでなければ `docs/issues/` へ移します。
 
 ## 設定
+
+ディレクトリごとに `config.json` を置けます。課題は `docs/issues/config.json`、仕様は
+`docs/specs/config.json`、文書は `docs/config.json` です。ここでは課題の設定を書きます。
+ほかは[仕様](#仕様)と[文書](#文書)にあります。
 
 `<dir>/config.json` は無くても動きます。未知のキーや型の誤りはエラーです。
 `md-issues init` は `"$schema"` を書くので、エディタで補完と検証が効きます
@@ -222,7 +245,7 @@ md-issues refs 6 --json
 
 ```json
 {
-  "$schema": "../node_modules/md-issues/schema/config.schema.json",
+  "$schema": "../../node_modules/md-issues/schema/config.schema.json",
   "lang": "ja",
   "severity": ["高", "中", "低"],
   "required": ["severity", "scope"],
@@ -256,6 +279,62 @@ Markdown の相対リンクを張りなおします。
 - 存在しない `.md` への相対リンク
 - 存在しない見出しへのアンカー（`file.md#section`・`#section`）。GitHub と同じ規則で見出しから作ります
 
+## 仕様
+
+仕様は、仕様のディレクトリの Markdown ファイル 1 つです（そこの `README.md` は仕様では
+ありません）。frontmatter に要件の ID の接頭辞を書きます。
+
+```markdown
+---
+prefix: NEWS              # 大文字英数字 2〜12 文字（先頭は英字）
+retired: [NEWS-004]       # 使わなくなった ID（任意）。使いまわさないために残す
+---
+
+## 要件
+
+### NEWS-001 トップに最新のお知らせを出す
+- トップを表示したとき、システムは最新の投稿を 3 件並べなければならない
+- **受け入れ条件**: 新しい順に 3 件、それぞれ日付つき
+- **検証**: 投稿を 4 件足してからトップを開く
+```
+
+`md-issues check specs` は次を見ます。
+
+- 接頭辞の形が正しく、ほかのファイルと重複しない
+- 要件の節の下の見出し（`### <接頭辞>-<3 桁> <見出し>`）が重複せず、retired の ID を使いまわさない
+- どの要件にも、要件の文（箇条書き）・受け入れ条件・検証がそろい、どれも空でない
+- **参照:** 文書のディレクトリと root の Markdown（`README.md`・`AGENTS.md` など）に書いた、
+  既知の接頭辞の ID が、定義済みか retired の要件である。コードブロックと `###` の見出しは見ない
+
+`docs/specs/config.json`（無くてよい）:
+
+| キー | 既定（`en` / `ja`） | 意味 |
+| --- | --- | --- |
+| `lang` | 課題の `lang`、無ければ `"en"` | メッセージと、下のラベルの既定 |
+| `requirements` | `"Requirements"` / `"要件"` | 要件の節の見出し |
+| `acceptance` | `"Acceptance"` / `"受け入れ条件"` | 受け入れ条件のラベル（`- **<ラベル>**: ...`） |
+| `verification` | `"Verification"` / `"検証"` | 検証のラベル（`- **<ラベル>**: ...`） |
+
+## 文書
+
+`md-issues check docs` は、文書のディレクトリにある Markdown（課題と仕様を含む）と、root の
+Markdown を検査します。Git のリポジトリでは、追跡しているファイルだけを読みます（Git が
+無視する手元のメモには触れません）。
+
+- **リンク:** 存在しないファイルへの相対リンク、空のリンク、存在しない見出しへのアンカー
+  （`file.md#section`・`#section`）。アンカーは GitHub と同じ規則で作ります。コードの中は見ない
+- **root の外へのリンク**はエラーです。書いた人の手元でしか開けないため
+- **禁止する語**（下の `forbid`）が、`forbidIgnore` を除く Git の追跡ファイルに無いこと。
+  共有するリポジトリに、特定のプロジェクトの名前を持ちこまないために使います
+
+`docs/config.json`（無くてよい）:
+
+| キー | 既定 | 意味 |
+| --- | --- | --- |
+| `lang` | 課題の `lang`、無ければ `"en"` | メッセージ |
+| `forbid` | `[]` | 追跡ファイルに書いてはいけない語 |
+| `forbidIgnore` | 課題のディレクトリ | 禁止する語を許すファイル（`*`・`**`・`?`）。課題は由来を記録する場所なので、名前が入って構わない。`docs/config.json` 自身は常に除く |
+
 ## 生成する一覧
 
 `<dir>/README.md` には、件数の要約、グループごとの表（深刻度、次に id の順）、
@@ -268,7 +347,7 @@ Markdown の相対リンクを張りなおします。
 | コード | 意味 |
 | --- | --- |
 | 0 | 成功 |
-| 1 | 検証エラー（課題・リンク・置き場所・古い一覧・存在しないコミット） |
+| 1 | 検証エラー（課題・仕様・リンク・禁止する語・置き場所・古い一覧・存在しないコミット） |
 | 2 | 設定エラー・使いかたの誤り（`config.json`・`package.json`・引数・root が見つからない） |
 
 ## CI とフックで使う
@@ -296,7 +375,7 @@ husky なら同じコマンドを `.husky/pre-commit` に書きます。lint-sta
 ```js
 // lint-staged.config.js
 export default {
-  "issues/**/*.md": () => "md-issues check",
+  "docs/**/*.md": () => "md-issues check",
 };
 ```
 
