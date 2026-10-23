@@ -2,15 +2,26 @@
 
 [日本語](README.ja.md)
 
-Keep issues as Markdown files in your repository. `md-issues` validates their frontmatter,
-moves closed issues out of the way, keeps relative links working and generates an index.
+Keep issues, specifications and other documents as Markdown files in your repository.
+`md-issues` validates issue frontmatter, moves closed issues out of the way, keeps relative links
+working, generates an index, and checks specifications and documents.
 
-- One issue per file: `issues/0001-slug.md`
-- Open issues stay at the top of `issues/`; `done` goes to `issues/done/`, `wontfix` to `issues/wontfix/`
+- One issue per file: `docs/issues/0001-slug.md`
+- Open issues stay at the top of `docs/issues/`; `done` goes to `docs/issues/done/`, `wontfix` to `docs/issues/wontfix/`
 - Relative links to moved issues are rewritten automatically
-- `issues/README.md` is generated from the frontmatter, so it never drifts
+- `docs/issues/README.md` is generated from the frontmatter, so it never drifts
+- Specifications in `docs/specs/`: requirement ids, acceptance criteria and references to ids are checked
+- Documents in `docs/`: links, heading anchors and forbidden words are checked
 - `md-issues check` for CI and pre-commit hooks
 - No runtime dependencies
+
+```text
+docs/
+  config.json        settings for the document check (optional)
+  issues/            issues (config.json, GUIDE.md, TEMPLATE.md, README.md is generated)
+  specs/             specifications (config.json is optional)
+  plans/ ...         anything else; checked as documents
+```
 
 ## Install
 
@@ -35,12 +46,12 @@ Node.js 18 or later is required.
 ## Quick start
 
 ```bash
-npx md-issues init                         # create issues/ with config.json, GUIDE.md, TEMPLATE.md, README.md
-npx md-issues new "Fix the login redirect" # create issues/0001-fix-the-login-redirect.md
-npx md-issues set 1 status=done            # update frontmatter; the file moves to issues/done/
+npx md-issues init                         # create docs/issues/ with config.json, GUIDE.md, TEMPLATE.md, README.md
+npx md-issues new "Fix the login redirect" # create docs/issues/0001-fix-the-login-redirect.md
+npx md-issues set 1 status=done            # update frontmatter; the file moves to docs/issues/done/
 npx md-issues list --status open           # print open issues
 npm run issues                             # validate, move, rewrite links, regenerate the index
-npm run check:issues                       # the same checks, changing nothing
+npm run check:issues                       # issues, specs and documents, changing nothing
 ```
 
 ## Issue files
@@ -69,7 +80,8 @@ related: [0002, 0005]
 ### Frontmatter syntax
 
 The frontmatter is **not YAML**. A YAML parser would read `id: 0031` as the number 31 and
-`commits: [4505e41]` as a float, so md-issues uses a small parser with these rules:
+`commits: [4505e41]` as a float, so md-issues uses a small parser with these rules.
+**Issues, specifications and every other document read by md-issues follow the same rules.**
 
 - The file starts with `---` and the frontmatter ends at the next `---` line.
 - One entry per line: `key: value` or `key: [a, b]` (comma-separated list).
@@ -87,7 +99,8 @@ The frontmatter is **not YAML**. A YAML parser would read `id: 0031` as the numb
 | Command | What it does |
 | --- | --- |
 | `md-issues` | Validate, move issues to the directory their status says, rewrite links, check links, generate the index |
-| `md-issues check` | Validate only. Fails when an issue is misplaced or the index is out of date |
+| `md-issues check` | Check issues, specifications and documents; change nothing. Fails when an issue is misplaced or the index is out of date |
+| `md-issues check issues` / `specs` / `docs` | Run one of the three checks |
 | `md-issues init` | Create the issue directory with `config.json`, `GUIDE.md`, `TEMPLATE.md` and `README.md`. Existing files are kept. `--lang ja` writes Japanese files |
 | `md-issues new "<title>"` | Create an issue from `TEMPLATE.md` with the next id |
 | `md-issues set <id> <key>=<value> ...` | Change frontmatter values of one issue, then move and re-index |
@@ -98,7 +111,7 @@ Common options:
 
 | Option | Meaning |
 | --- | --- |
-| `--dir`, `-d <path>` | Issue directory, relative to the root |
+| `--dir`, `-d <path>` | Issue directory, relative to the root (only for issue commands) |
 | `--root <path>` | Project root |
 | `--help`, `-h` | Show help |
 | `--version`, `-v` | Show the version |
@@ -143,7 +156,7 @@ md-issues list --json
 
 ```bash
 md-issues refs 0006
-# related  issues/0009-x.md
+# related  docs/issues/0009-x.md
 # link     docs/notes.md:12
 md-issues refs 6 --json
 ```
@@ -162,16 +175,27 @@ md-issues refs 6 --json
 3. The nearest ancestor directory with a `package.json`
 4. The Git work tree root
 
-### Issue directory
+### Directories
 
-1. `--dir`
-2. `"issues": { "dir": "..." }` in the root `package.json`
-3. `issues/`
+| Directory | Default | Set in the root `package.json` |
+| --- | --- | --- |
+| Issues | `docs/issues/` | `"issues": { "dir": "..." }` (or `--dir`) |
+| Specifications | `docs/specs/` | `"issues": { "specsDir": "..." }` |
+| Documents | `docs/` | `"issues": { "docsDir": "..." }` |
 
-`md-issues init --dir docs/tasks` saves the directory to `package.json`, so later commands
-find it without `--dir`. The directory must be inside the root.
+`md-issues init --dir tasks` saves the issue directory to `package.json`, so later commands
+find it without `--dir`. Directories must be inside the root. A missing specifications or
+documents directory is not an error: that check has nothing to do.
+
+**Upgrading from 0.2:** the issue directory used to default to `issues/`. To keep it there,
+add `"issues": { "dir": "issues" }` to `package.json`; otherwise move it to `docs/issues/`.
 
 ## Configuration
+
+Each directory may have a `config.json`: `docs/issues/config.json` for issues,
+`docs/specs/config.json` for specifications and `docs/config.json` for documents. The settings
+for issues are below; see [Specifications](#specifications) and [Documents](#documents) for the
+others.
 
 `<dir>/config.json` is optional. Unknown keys and wrong types are errors.
 `md-issues init` adds `"$schema"` so that editors can complete and validate it
@@ -221,7 +245,7 @@ A fuller example:
 
 ```json
 {
-  "$schema": "../node_modules/md-issues/schema/config.schema.json",
+  "$schema": "../../node_modules/md-issues/schema/config.schema.json",
   "lang": "ja",
   "severity": ["高", "中", "低"],
   "required": ["severity", "scope"],
@@ -255,6 +279,65 @@ Then every one of those files and the generated index are checked:
 - relative links to `.md` files that do not exist
 - heading anchors (`file.md#section`, `#section`) that do not exist, using GitHub's rules
 
+## Specifications
+
+A specification is one Markdown file in the specifications directory (`README.md` there is not
+a specification). Its frontmatter names a prefix for its requirement ids:
+
+```markdown
+---
+prefix: NEWS              # 2–12 uppercase letters and digits, starting with a letter
+retired: [NEWS-004]       # ids no longer used (optional); they are never reused
+---
+
+## Requirements
+
+### NEWS-001 Show the latest news on the front page
+- When the front page is shown, the system must list the three latest posts.
+- **Acceptance**: three posts, newest first, each with its date.
+- **Verification**: open the front page after adding four posts.
+```
+
+`md-issues check specs` checks:
+
+- the prefix is well-formed and not used by another file
+- requirement headings (`### <PREFIX>-<3 digits> <title>`) under the requirements section, with no
+  duplicates and no reuse of retired ids
+- every requirement has a sentence (a list item), an acceptance criterion and a verification,
+  neither empty
+- **references:** an id with a known prefix written anywhere in the documents directory or in the
+  Markdown files at the root (for example `README.md`, `AGENTS.md`) must be a defined or retired
+  requirement. Code blocks and `###` headings are skipped
+
+`docs/specs/config.json` (optional):
+
+| Key | Default (`en` / `ja`) | Meaning |
+| --- | --- | --- |
+| `lang` | the issues' `lang`, else `"en"` | Messages and the default labels below |
+| `requirements` | `"Requirements"` / `"要件"` | Heading of the requirements section |
+| `acceptance` | `"Acceptance"` / `"受け入れ条件"` | Label of the acceptance criterion (`- **<label>**: ...`) |
+| `verification` | `"Verification"` / `"検証"` | Label of the verification (`- **<label>**: ...`) |
+
+## Documents
+
+`md-issues check docs` checks every Markdown file in the documents directory (including issues
+and specifications) and the Markdown files at the root. In a Git repository only tracked files
+are read, so local notes that Git ignores are left alone:
+
+- **links:** relative links to files that do not exist, empty links, and heading anchors
+  (`file.md#section`, `#section`) that do not exist, using GitHub's rules. Code is skipped
+- **links that leave the root** are errors: they work only on the author's machine
+- **forbidden words** (`forbid` below) in any file tracked by Git, except the files in
+  `forbidIgnore`. Use it to keep names of one project out of a shared repository
+
+`docs/config.json` (optional):
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `lang` | the issues' `lang`, else `"en"` | Messages |
+| `forbid` | `[]` | Words that must not appear in tracked files |
+| `forbidIgnore` | the issue directory | Files where forbidden words are allowed (`*`, `**`, `?`). Issues record where things came from, so names belong there. `docs/config.json` itself is always ignored |
+
 ## Generated index
 
 `<dir>/README.md` contains a summary line, one table per group (sorted by severity, then id),
@@ -267,7 +350,7 @@ md-issues (for example `npm run issues`), or `md-issues` when there is none.
 | Code | Meaning |
 | --- | --- |
 | 0 | Success |
-| 1 | Validation error (issues, links, misplaced files, stale index, unknown commits) |
+| 1 | Validation error (issues, specifications, links, forbidden words, misplaced files, stale index, unknown commits) |
 | 2 | Configuration or usage error (`config.json`, `package.json`, arguments, root not found) |
 
 ## Using it in CI and hooks
@@ -295,7 +378,7 @@ that the checks run once for the whole directory rather than per file:
 ```js
 // lint-staged.config.js
 export default {
-  "issues/**/*.md": () => "md-issues check",
+  "docs/**/*.md": () => "md-issues check",
 };
 ```
 

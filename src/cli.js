@@ -3,7 +3,9 @@
 import { readFileSync } from "node:fs";
 import { ConfigError, UsageError, ValidationError } from "./errors.js";
 import { t } from "./i18n.js";
-import { openProject } from "./project.js";
+import { openDocuments, openProject } from "./project.js";
+import { checkDocs } from "./checks/docs.js";
+import { checkSpecs } from "./checks/specs.js";
 import { sync } from "./sync.js";
 import { init } from "./commands/init.js";
 import { newIssue } from "./commands/new.js";
@@ -17,7 +19,8 @@ const HELP = `Usage: md-issues [command] [options]
 
 Commands:
   (none)                        Validate, move issues, rewrite links and generate the index
-  check                         Validate only; change nothing (for CI and pre-commit)
+  check [issues|specs|docs]     Check issues, specifications and documents (or one of
+                                them); change nothing (for CI and pre-commit)
   init                          Create the issue directory with config.json, GUIDE.md,
                                 TEMPLATE.md and README.md (existing files are kept).
                                 With --dir, the directory is saved to package.json
@@ -39,7 +42,7 @@ Commands:
 
 Options:
   --dir, -d <path>              Issue directory, relative to the root
-                                (default: "issues" in package.json, then issues/)
+                                (default: "issues" in package.json, then docs/issues/)
   --root <path>                 Project root (default: found from package.json or Git)
   --help, -h                    Show this help
   --version, -v                 Show the version
@@ -137,9 +140,45 @@ export function parseArgs(argv) {
 }
 
 /** md-issues check: the full pipeline without writing anything. */
+const CHECKS = ["issues", "specs", "docs"];
+
+/**
+ * md-issues check [issues|specs|docs]: run the checks without writing anything.
+ * Every part runs even when an earlier one fails, so that one run shows everything.
+ * A configuration error still stops at once.
+ */
 function check({ args, base, log, warn }) {
-  if (args.positionals.length) throw new UsageError("usage.extraArgs", { arg: args.positionals[0] });
-  sync(openProject(base), { check: true, log, warn });
+  const [part, ...extra] = args.positionals;
+  if (extra.length) throw new UsageError("usage.extraArgs", { arg: extra[0] });
+  if (part !== undefined && !CHECKS.includes(part)) throw new UsageError("usage.unknownCheck", { part, known: CHECKS.join(" | ") });
+
+  const problems = [];
+  const seen = new Set();
+  const collect = (fn) => {
+    try {
+      fn();
+    } catch (e) {
+      if (!(e instanceof ValidationError)) throw e;
+      for (const p of e.problems) {
+        // The issue check and the document check may both find the same broken link;
+        // the issue check reports no line number, so compare without it.
+        const key = JSON.stringify([p.code, String(p.params?.file ?? "").replace(/:\d+$/, ""), p.params?.target ?? p.params]);
+        if (!seen.has(key)) {
+          seen.add(key);
+          problems.push(p);
+        }
+      }
+    }
+  };
+  for (const name of part ? [part] : CHECKS) {
+    if (name === "issues") {
+      collect(() => sync(openProject(base), { check: true, log, warn }));
+    } else {
+      const ctx = openDocuments(base);
+      collect(() => (name === "specs" ? checkSpecs(ctx, { log }) : checkDocs(ctx, { log })));
+    }
+  }
+  if (problems.length) throw new ValidationError(problems);
   return 0;
 }
 

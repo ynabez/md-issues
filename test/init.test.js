@@ -7,9 +7,9 @@ test("creates the starter files", () => {
   const root = project();
   const r = run(root, "init");
   assert.equal(r.code, 0, r.stderr);
-  for (const f of ["config.json", "GUIDE.md", "TEMPLATE.md", "README.md"]) assert.ok(exists(root, `issues/${f}`), f);
-  assert.deepEqual(JSON.parse(read(root, "issues/config.json")), { $schema: "../node_modules/md-issues/schema/config.schema.json", lang: "en" });
-  assert.doesNotMatch(read(root, "issues/GUIDE.md"), /replaces this section/);
+  for (const f of ["config.json", "GUIDE.md", "TEMPLATE.md", "README.md"]) assert.ok(exists(root, `docs/issues/${f}`), f);
+  assert.deepEqual(JSON.parse(read(root, "docs/issues/config.json")), { $schema: "../../node_modules/md-issues/schema/config.schema.json", lang: "en" });
+  assert.doesNotMatch(read(root, "docs/issues/GUIDE.md"), /replaces this section/);
   assert.equal(JSON.parse(read(root, "package.json")).issues, undefined);
   assert.equal(run(root, "check").code, 0);
 });
@@ -29,12 +29,12 @@ test("--dir is saved to package.json and used afterwards", () => {
 });
 
 test("keeps existing files", () => {
-  const root = project({ "issues/GUIDE.md": "mine\n", "issues/README.md": "old\n" });
+  const root = project({ "docs/issues/GUIDE.md": "mine\n", "docs/issues/README.md": "old\n" });
   const r = run(root, "init");
-  assert.match(r.stdout, /Skipped issues\/GUIDE\.md/);
-  assert.match(r.stdout, /Skipped issues\/README\.md/);
-  assert.equal(read(root, "issues/GUIDE.md"), "mine\n");
-  assert.equal(read(root, "issues/README.md"), "old\n");
+  assert.match(r.stdout, /Skipped docs\/issues\/GUIDE\.md/);
+  assert.match(r.stdout, /Skipped docs\/issues\/README\.md/);
+  assert.equal(read(root, "docs/issues/GUIDE.md"), "mine\n");
+  assert.equal(read(root, "docs/issues/README.md"), "old\n");
 });
 
 test("without package.json the directory cannot be saved", () => {
@@ -53,15 +53,15 @@ test("option errors", () => {
 });
 
 test("messages use the language of an existing config.json from the first line", () => {
-  const root = project({ "issues/config.json": { lang: "ja" } });
+  const root = project({ "docs/issues/config.json": { lang: "ja" } });
   run(root, "init");
   const r = run(root, "init");
   assert.equal(r.code, 0, r.stderr);
   assert.equal(r.stdout, [
-    "スキップ: issues/config.json（すでにあります）",
-    "スキップ: issues/GUIDE.md（すでにあります）",
-    "スキップ: issues/TEMPLATE.md（すでにあります）",
-    "スキップ: issues/README.md（すでにあります）",
+    "スキップ: docs/issues/config.json（すでにあります）",
+    "スキップ: docs/issues/GUIDE.md（すでにあります）",
+    "スキップ: docs/issues/TEMPLATE.md（すでにあります）",
+    "スキップ: docs/issues/README.md（すでにあります）",
     "",
   ].join("\n"));
 });

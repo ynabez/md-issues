@@ -1,12 +1,13 @@
 // The context every command works on: root, issue directory and configuration.
 
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { ConfigError } from "./errors.js";
 import { setLang } from "./i18n.js";
 import { INDEX_FILE } from "./issues.js";
-import { findRoot, readPackageJson, resolveDir } from "./root.js";
+import { documentFiles, langOf, projectFiles } from "./files.js";
+import { findRoot, readPackageJson, resolveDir, resolveDocsDir, resolveSpecsDir } from "./root.js";
 
 /**
  * @param {{ cwd: string, root?: string, dir?: string, mustExist?: boolean }} options
@@ -27,6 +28,29 @@ export function openProject({ cwd, root: rootOption, dir: dirOption, mustExist =
     config,
     indexRel: `${dirRel}/${INDEX_FILE}`,
     cmd: commandName(root),
+  };
+}
+
+/**
+ * The context of the specification and document checks. They do not need the issue
+ * directory to exist; its config.json only lends them its "lang" as a default.
+ */
+export function openDocuments({ cwd, root: rootOption, dir: dirOption }) {
+  const root = findRoot({ cwd, root: rootOption });
+  const issuesDir = resolveDir(root, dirOption);
+  const docsDir = resolveDocsDir(root);
+  const issuesConfig = join(root, issuesDir, "config.json");
+  const lang = (existsSync(issuesConfig) && langOf(readFileSync(issuesConfig, "utf8"))) || "en";
+  setLang(lang);
+  const files = projectFiles(root);
+  return {
+    root,
+    issuesDir,
+    specsDir: resolveSpecsDir(root),
+    docsDir,
+    lang,
+    files,
+    documents: documentFiles(files, docsDir),
   };
 }
 

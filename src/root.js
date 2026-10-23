@@ -5,7 +5,12 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { ConfigError } from "./errors.js";
 
-export const DEFAULT_DIR = "issues";
+export const DEFAULT_DIR = "docs/issues";
+export const DEFAULT_SPECS_DIR = "docs/specs";
+export const DEFAULT_DOCS_DIR = "docs";
+
+// Keys of "issues" in package.json.
+const PACKAGE_KEYS = ["dir", "specsDir", "docsDir"];
 
 /**
  * Find the project root.
@@ -73,19 +78,33 @@ export function readPackageJson(dir) {
  *   3. issues/
  */
 export function resolveDir(root, dirOption) {
-  let dir = dirOption;
-  if (dir === undefined) {
-    const pkg = readPackageJson(root);
-    const entry = pkg?.json.issues;
-    if (entry !== undefined) {
-      if (typeof entry !== "object" || entry === null || Array.isArray(entry) ||
-          (entry.dir !== undefined && typeof entry.dir !== "string")) {
-        throw new ConfigError("pkg.issuesType", { file: "package.json" });
-      }
-      dir = entry.dir;
-    }
+  return normalizeDir(root, dirOption ?? packageEntry(root).dir ?? DEFAULT_DIR);
+}
+
+/** The specifications directory: "issues": { "specsDir" } in package.json, then docs/specs/. */
+export function resolveSpecsDir(root) {
+  return normalizeDir(root, packageEntry(root).specsDir ?? DEFAULT_SPECS_DIR);
+}
+
+/** The documents directory: "issues": { "docsDir" } in package.json, then docs/. */
+export function resolveDocsDir(root) {
+  return normalizeDir(root, packageEntry(root).docsDir ?? DEFAULT_DOCS_DIR);
+}
+
+/** The "issues" entry of the root package.json, validated. {} when there is none. */
+function packageEntry(root) {
+  const entry = readPackageJson(root)?.json.issues;
+  if (entry === undefined) return {};
+  if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+    throw new ConfigError("pkg.issuesType", { file: "package.json" });
   }
-  return normalizeDir(root, dir ?? DEFAULT_DIR);
+  for (const [key, value] of Object.entries(entry)) {
+    if (!PACKAGE_KEYS.includes(key)) {
+      throw new ConfigError("pkg.issuesKey", { file: "package.json", key, known: PACKAGE_KEYS.join(", ") });
+    }
+    if (typeof value !== "string") throw new ConfigError("pkg.issuesType", { file: "package.json" });
+  }
+  return entry;
 }
 
 function normalizeDir(root, dir) {

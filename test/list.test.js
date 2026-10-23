@@ -4,10 +4,10 @@ import { project, read, run, issue } from "./helpers.js";
 
 const root = () =>
   project({
-    "issues/config.json": { lang: "ja", severity: ["高", "低"] },
-    "issues/0001-a.md": issue({ id: "0001", title: "ログイン", status: "open", severity: "低", related: ["0002"] }),
-    "issues/0002-b.md": issue({ id: "0002", title: "B", status: "doing", severity: "高" }),
-    "issues/done/0003-c.md": issue({ id: "0003", title: "C", status: "done", severity: "高" }),
+    "docs/issues/config.json": { lang: "ja", severity: ["高", "低"] },
+    "docs/issues/0001-a.md": issue({ id: "0001", title: "ログイン", status: "open", severity: "低", related: ["0002"] }),
+    "docs/issues/0002-b.md": issue({ id: "0002", title: "B", status: "doing", severity: "高" }),
+    "docs/issues/done/0003-c.md": issue({ id: "0003", title: "C", status: "done", severity: "高" }),
   });
 
 test("prints an aligned table sorted like the index", () => {
@@ -29,13 +29,13 @@ test("filters: same key is OR, different keys are AND", () => {
   assert.deepEqual(ids("--status", "open", "--status", "done", "--severity", "高"), ["0003"]);
   assert.deepEqual(ids("--related", "0002"), ["0001"]);
   const json = JSON.parse(run(dir, "list", "--json", "--status", "done").stdout);
-  assert.deepEqual(json, [{ id: "0003", title: "C", status: "done", severity: "高", group: "done", path: "issues/done/0003-c.md" }]);
+  assert.deepEqual(json, [{ id: "0003", title: "C", status: "done", severity: "高", group: "done", path: "docs/issues/done/0003-c.md" }]);
 });
 
 test("changes nothing and rejects unknown fields", () => {
   const dir = root();
   run(dir, "list");
-  assert.equal(read(dir, "issues/done/0003-c.md").includes("status: done"), true);
+  assert.equal(read(dir, "docs/issues/done/0003-c.md").includes("status: done"), true);
   const r = run(dir, "list", "--stauts", "open");
   assert.equal(r.code, 2);
   assert.equal(run(dir, "--json").code, 2);
