@@ -39,7 +39,7 @@ Commands:
 
 Options:
   --dir, -d <path>              Issue directory, relative to the root
-                                (default: "issues" in package.json, then issues/)
+                                (default: "issues" in package.json, then docs/issues/)
   --root <path>                 Project root (default: found from package.json or Git)
   --help, -h                    Show this help
   --version, -v                 Show the version
