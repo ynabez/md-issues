@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { ConfigError, UsageError, ValidationError } from "./errors.js";
 import { t } from "./i18n.js";
 import { openDocuments, openProject } from "./project.js";
+import { checkDocs } from "./checks/docs.js";
 import { checkSpecs } from "./checks/specs.js";
 import { sync } from "./sync.js";
 import { init } from "./commands/init.js";
@@ -18,8 +19,8 @@ const HELP = `Usage: md-issues [command] [options]
 
 Commands:
   (none)                        Validate, move issues, rewrite links and generate the index
-  check [issues|specs]          Check issues and specifications (or one of them);
-                                change nothing (for CI and pre-commit)
+  check [issues|specs|docs]     Check issues, specifications and documents (or one of
+                                them); change nothing (for CI and pre-commit)
   init                          Create the issue directory with config.json, GUIDE.md,
                                 TEMPLATE.md and README.md (existing files are kept).
                                 With --dir, the directory is saved to package.json
@@ -139,10 +140,10 @@ export function parseArgs(argv) {
 }
 
 /** md-issues check: the full pipeline without writing anything. */
-const CHECKS = ["issues", "specs"];
+const CHECKS = ["issues", "specs", "docs"];
 
 /**
- * md-issues check [issues|specs]: run the checks without writing anything.
+ * md-issues check [issues|specs|docs]: run the checks without writing anything.
  * Every part runs even when an earlier one fails, so that one run shows everything.
  * A configuration error still stops at once.
  */
@@ -159,7 +160,8 @@ function check({ args, base, log, warn }) {
     } catch (e) {
       if (!(e instanceof ValidationError)) throw e;
       for (const p of e.problems) {
-        // The same problem may be found by more than one check; report it once.
+        // The issue check and the document check may both find the same broken link;
+        // the issue check reports no line number, so compare without it.
         const key = JSON.stringify([p.code, String(p.params?.file ?? "").replace(/:\d+$/, ""), p.params?.target ?? p.params]);
         if (!seen.has(key)) {
           seen.add(key);
@@ -173,7 +175,7 @@ function check({ args, base, log, warn }) {
       collect(() => sync(openProject(base), { check: true, log, warn }));
     } else {
       const ctx = openDocuments(base);
-      collect(() => checkSpecs(ctx, { log }));
+      collect(() => (name === "specs" ? checkSpecs(ctx, { log }) : checkDocs(ctx, { log })));
     }
   }
   if (problems.length) throw new ValidationError(problems);
