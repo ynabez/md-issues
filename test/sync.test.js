@@ -294,3 +294,14 @@ test("counts of one are singular in English", () => {
   assert.match(run(root, "check").stdout, /Check passed \(1 issue\)/);
   assert.match(read(root, "docs/issues/README.md"), /^1 issue — Open 1/m);
 });
+
+test("links to the index work on the first run", () => {
+  const root = project({
+    "docs/README.md": "# Docs\n\nSee the [issues](issues/README.md).\n",
+    "docs/issues/config.json": { linkFiles: ["docs/*.md"] },
+    "docs/issues/0001-a.md": issue({ id: "0001", title: "A", status: "open" }),
+  });
+  const r = run(root);
+  assert.equal(r.code, 0, r.stderr);
+  assert.ok(exists(root, "docs/issues/README.md"));
+});

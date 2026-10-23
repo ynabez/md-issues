@@ -71,7 +71,10 @@ export function sync(ctx, { check = false, log, warn, transform, writes = [], on
   }
 
   // Checked against the pending state: moved files, rewritten links, the new index.
+  // The index counts as written already, so that links to it work on the first run.
   const index = buildIndex(ctx, issues);
+  const current = ws.exists(ctx.indexRel) ? ws.read(ctx.indexRel) : null;
+  if (!check && current !== index) ws.write(ctx.indexRel, index);
   const problems = [
     ...checkLinks(ws, linkTargets(ctx, issues, linkFiles), { origin }),
     ...checkLinks(ws, [ctx.indexRel], { contents: { [ctx.indexRel]: index } }),
@@ -79,14 +82,12 @@ export function sync(ctx, { check = false, log, warn, transform, writes = [], on
   ];
   if (problems.length) throw new ValidationError(problems);
 
-  const current = ws.exists(ctx.indexRel) ? ws.read(ctx.indexRel) : null;
   if (check) {
     if (current !== index) throw new ValidationError([{ code: "result.stale", params: { index: ctx.indexRel, cmd: ctx.cmd } }]);
     log("result.checkOk", { n: issues.length });
     return issues;
   }
 
-  if (current !== index) ws.write(ctx.indexRel, index);
   ws.commit();
   onCommit?.();
   for (const m of moves) log("result.moved", { from: m.from, to: m.to });
