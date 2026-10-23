@@ -35,6 +35,8 @@ Guidance for coding agents working in this repository.
 | `bin/md-issues.js` | Entry point |
 | `src/cli.js` | Argument parsing and dispatch |
 | `src/` | Implementation (one module per concern) |
+| `src/commands/` | Issue commands other than the default run (`init`, `new`, `set`, `list`, `refs`) |
+| `src/checks/` | The specification and document checks (`check specs`, `check docs`) |
 | `schema/config.schema.json` | JSON Schema for `config.json` |
 | `test/` | Tests (`node --test`) |
 
